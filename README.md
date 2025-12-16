@@ -90,13 +90,6 @@ $wgHooks['SimpleMathJaxAttributes'][]
 	<tbody>
 		<tr>
             <td align="center">
-                <a href="https://github.com/dummy-index">
-                    <img src="https://avatars.githubusercontent.com/u/3407906?v=4" width="48;" alt="dummy-index"/>
-                    <br />
-                    <sub><b>dummy-index</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/jmnote">
                     <img src="https://avatars.githubusercontent.com/u/2242405?v=4" width="48;" alt="jmnote"/>
                     <br />
@@ -115,6 +108,13 @@ $wgHooks['SimpleMathJaxAttributes'][]
                     <img src="https://avatars.githubusercontent.com/u/43581?v=4" width="48;" alt="hexmode"/>
                     <br />
                     <sub><b>Mark A. Hershberger</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/dummy-index">
+                    <img src="https://avatars.githubusercontent.com/u/3407906?v=4" width="48;" alt="dummy-index"/>
+                    <br />
+                    <sub><b>dummy-index</b></sub>
                 </a>
             </td>
             <td align="center">
