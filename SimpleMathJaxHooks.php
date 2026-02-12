@@ -45,7 +45,7 @@ class SimpleMathJaxHooks {
 
 	public static function renderMath($tex, array $args, Parser $parser, PPFrame $frame ) {
 		global $wgOut;
-		$tex = self::delimitComment( $tex );
+		$tex = self::delimitComment( (string)$tex );
 		if( !self::$enableHtmlAttributes ) $args = [];
 		if( isset($args["chem"]) ) {
 			$wgOut->addJsConfigVars( "wgSmjPreloadChem", true );
@@ -73,14 +73,14 @@ class SimpleMathJaxHooks {
 
 	public static function renderChem($tex, array $args, Parser $parser, PPFrame $frame ) {
 		global $wgOut;
-		$tex = self::delimitComment( $tex );
+		$tex = self::delimitComment( (string)$tex );
 		$wgOut->addJsConfigVars( "wgSmjPreloadChem", true );
 		if( !self::$enableHtmlAttributes ) $args = [];
 		return self::renderTex("\\ce{ $tex }", $parser, $args);
 	}
 
 	private static function delimitComment($tex ) {
-		$last_line_comment = '/%[^\n]*$/';
+		$last_line_comment = '/(?<!\\\\)(?:\\\\\\\\)*%[^\n]*$/';
 		if( preg_match($last_line_comment, $tex) ) {
 			return $tex . "\n";
 		}
