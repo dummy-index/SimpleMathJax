@@ -1,16 +1,18 @@
 <?php
 use MediaWiki\Html\Html;
 use MediaWiki\Parser\Sanitizer;
+use MediaWiki\Parser\Parser;
 class SimpleMathJaxHooks {
 	private static $useChem;
 	private static $wrapDisplaystyle;
 	private static $enableHtmlAttributes;
+	private static $processComments;
 
 	public static function onParserFirstCallInit( Parser $parser ) {
 		global $wgOut, $wgSmjUseCdn, $wgSmjUseChem, $wgSmjDirectMathJax, $wgSmjEnableMenu,
 			$wgSmjDisplayMath, $wgSmjExtraInlineMath, $wgSmjIgnoreHtmlClass,
 			$wgSmjScale, $wgSmjDisplayAlign, $wgSmjWrapDisplaystyle,
-			$wgSmjEnableHtmlAttributes, $wgSmjConfigByRevision;
+			$wgSmjEnableHtmlAttributes, $wgSmjProcessComments, $wgSmjConfigByRevision;
 
 		$globalvars = [ "wgSmjUseCdn", "wgSmjDirectMathJax",
 				"wgSmjDisplayMath", "wgSmjExtraInlineMath", "wgSmjIgnoreHtmlClass",
@@ -21,6 +23,7 @@ class SimpleMathJaxHooks {
 		self::$useChem = $wgSmjUseChem;
 		self::$wrapDisplaystyle = $wgSmjWrapDisplaystyle;
 		self::$enableHtmlAttributes = $wgSmjEnableHtmlAttributes;
+		self::$processComments = $wgSmjProcessComments;
 
 		$articlerev = (int)$wgOut->getRevisionId();
 		foreach ($wgSmjConfigByRevision as $confset) {
@@ -34,6 +37,7 @@ class SimpleMathJaxHooks {
 			if (isset($confset["wgSmjUseChem"]) ) self::$useChem = $confset["wgSmjUseChem"];
 			if (isset($confset["wgSmjWrapDisplaystyle"]) ) self::$wrapDisplaystyle = $confset["wgSmjWrapDisplaystyle"];
 			if (isset($confset["wgSmjEnableHtmlAttributes"]) ) self::$enableHtmlAttributes = $confset["wgSmjEnableHtmlAttributes"];
+			if (isset($confset["wgSmjProcessComments"]) ) self::$processComments = $confset["wgSmjProcessComments"];
 		}
 
 		$wgOut->addModules( [ 'ext.SimpleMathJax' ] );
@@ -112,5 +116,26 @@ class SimpleMathJaxHooks {
 		$attributes = [ "class" => "error texerror" ];
 		$element = Html::Element( "strong", $attributes, $str );
 		return [$element, 'markerType'=>'nowiki'];
+	}
+
+	public static function onInternalParseBeforeLinks( Parser &$parser, &$text, $stripState ) {
+		if( !self::$processComments ) {
+			return;
+		}
+		$markerPattern = Parser::MARKER_PREFIX . '.*?' . Parser::MARKER_SUFFIX;
+		$pattern = '/
+			(?<!\\\\)(?:\\\\\\\\)*%     # a percent preceded even number of backslashes
+			[^\n\x7f]*?                 # everything until \n or marker
+			(?:                         # grouping
+				(?=\n\s*(?:\n|\x7f|$))  # not eat newline with trailing blank line
+				|
+				\n                          # eat newline
+				|
+				(?=' . $markerPattern . '|$)    # make sure its marker or eos
+			)
+		/x';
+
+		$text = preg_replace($pattern, '', $text);
+		$text = str_replace('\\%', '%', $text);
 	}
 }
