@@ -131,7 +131,7 @@ class SimpleMathJaxHooks {
 				|
 				\n                          # eat newline
 				|
-				(?=' . $markerPattern . '|$)    # make sure its marker or eos
+				(?=' . $markerPattern . '|\<br\s*\/?\>|$)    # make sure its marker or br or eos
 			)
 		/x';
 
