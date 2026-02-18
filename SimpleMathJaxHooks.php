@@ -80,7 +80,7 @@ class SimpleMathJaxHooks {
 	}
 
 	private static function delimitComment($tex ) {
-		$last_line_comment = '/(?<!\\\\)(?:\\\\\\\\)*%[^\n]*$/';
+		$last_line_comment = '/(?<!\\\\)(?:\\\\\\\\)*%[^\n]*\z/';
 		if( preg_match($last_line_comment, $tex) ) {
 			return $tex . "\n";
 		}
