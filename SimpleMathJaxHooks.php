@@ -120,14 +120,62 @@ MWDebug::init();
 	}
 
 	public static function onInternalParseBeforeLinks( Parser &$parser, &$text, $stripState ) {
+		static $marker_index = 1;//MWDebug::log($marker_index);
+
 		if( !self::$allowIndent ) {
 			return;
 		}
 
-		MWDebug::log(self::FindTexRanges($text));
+		//MWDebug::log(self::findTexRanges($text));
+		$marker_pattern = Parser::MARKER_PREFIX . '.*?' . Parser::MARKER_SUFFIX;
+		$block_syntax_pattern = '/\n[\s\n]*\n|' . $marker_pattern . '\s*/';
+
+		$ret = self::preg_explode($block_syntax_pattern, $text);
+		$paragraphs = $ret['tokens'];
+		$delimiters = $ret['delimiters'];
+
+		foreach ($paragraphs as &$para) {
+			if (trim($para) === '') continue;
+
+			$matches = self::findTexRanges($para);//MWDebug::log($matches);
+			$parts = [];
+			$prev_end = 0;
+			foreach ($matches as $match) {
+				$parts[] = substr($para, $prev_end, $match['start'] - $prev_end);
+				$marker = Parser::MARKER_PREFIX . '-smjrawtex-' . sprintf( '%08X', $marker_index++ ) . Parser::MARKER_SUFFIX;
+				$content = substr($para, $match['start'], $match['end'] - $match['start']);MWDebug::log($content);
+				$stripState->addNoWiki($marker, $content, 'nowiki');
+				$parts[] = $marker;
+				$prev_end = $match['end'];
+			}
+			$parts[] = substr($para, $prev_end);
+			$para = implode('', $parts);
+		}
+
+		$text = self::rejoin_with_delimiters($paragraphs, $delimiters);
 	}
 
-	private static function FindTexRanges( string $text ): array {
+	private static function preg_explode(string $pattern, string $subject): array {
+		preg_match_all($pattern, $subject, $matches, PREG_PATTERN_ORDER);
+		$delimiters = $matches[0];
+
+		$tokens = preg_split($pattern, $subject);
+
+		return [ 'tokens' => $tokens, 'delimiters' => $delimiters ];
+	}
+
+	private static function rejoin_with_delimiters(array $tokens, array $delimiters): string {
+		$parts = [];MWDebug::log($tokens[0]);
+		foreach ($tokens as $i => $token) {
+			$parts[] = $token;
+			if (isset($delimiters[$i])) {
+				$parts[] = $delimiters[$i];
+			}
+		}
+		return implode('', $parts);
+	}
+
+	private static function findTexRanges( string $text ): array {
 		global $wgOut;
 		$displayMath = $wgOut->getJsConfigVars()["wgSmjDisplayMath"];
 		$inlineMath = array_merge($wgOut->getJsConfigVars()["wgSmjExtraInlineMath"], [['[math]', '[/math]']]);
@@ -140,9 +188,10 @@ MWDebug::init();
 		# Build opening delimiter pattern
 		$open_delimiters = implode('|', array_map(function ($delim) { return preg_quote($delim[0], '/'); }, $delimiters));
 		if ($wgOut->getJsConfigVars()["wgSmjDirectMathJax"] == "full") {
+			# processEscapes = true
 		} else {
 		}
-		$start_pattern = "/^ .*$|\\\\begin\{.*?\}|{$open_delimiters}/m";
+		$start_pattern = "/^ .*$|\\\\begin\s*\{.*?\}|{$open_delimiters}/m";
 
 		$ranges = [];
 		$offset = 0;
@@ -164,10 +213,10 @@ MWDebug::init();
 
 			# Matched one of the opening delimiters
 			# Pattern to search for closing delimiter or unescaped braces
-			if (preg_match('/^\\\\begin\s\{(.*?)\}$/', $result[0][0], $subresult)) {
-				$brace_pattern = '/(\\\\end\s*\{' . preg_quote($subresult[1], '/') . '\}|\\\\[\\\\{}]|[{}])/';
+			if (preg_match('/^\\\\begin\s*\{(.*?)\}$/', $result[0][0], $subresult)) {
+				$brace_pattern = '/(\\\\end\s*\{' . preg_quote($subresult[1], '/') . '\}|\<\/?[bi]\>|\\\\[\\\\{}]|[{}])/';
 			} else {
-				$brace_pattern = '/(' . preg_quote($delimiter_map[$result[0][0]], '/') . '|\\\\[\\\\{}]|[{}])/';
+				$brace_pattern = '/(' . preg_quote($delimiter_map[$result[0][0]], '/') . '|\<\/?[bi]\>|\\\\[\\\\{}]|[{}])/';
 			}
 
 			$offset = $match_offset + strlen($result[0][0]);
@@ -185,13 +234,17 @@ MWDebug::init();
 					return false;
 				} else if (preg_match('/^\\\\[\\\\{}]$/', $matches[0][0])) {
 					return false;
+				} else if ($matches[0][0][0] === '<') {
+					return true;
 				}
 				if ($braces > 0) {
 					return false;
 				}
 				return true;
 			}, $result, $offset);
-			if (!$ret) {//MWDebug::log($brace_pattern);break;
+			if (!$ret) {
+				continue;
+			} else if ($result[0][0][0] === '<') {
 				continue;
 			}
 			$end_offset = $result[0][1];
