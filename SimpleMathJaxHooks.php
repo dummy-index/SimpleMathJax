@@ -9,6 +9,10 @@ class SimpleMathJaxHooks {
 	private static $enableHtmlAttributes;
 	private static $allowIndent;
 
+	private static $displayMath;
+	private static $inlineMath;
+	private static $directMathJax;
+
 	public static function onParserFirstCallInit( Parser $parser ) {
 		global $wgOut, $wgSmjUseCdn, $wgSmjUseChem, $wgSmjDirectMathJax, $wgSmjEnableMenu,
 			$wgSmjDisplayMath, $wgSmjExtraInlineMath, $wgSmjIgnoreHtmlClass,
@@ -40,6 +44,10 @@ MWDebug::init();
 			if (isset($confset["wgSmjEnableHtmlAttributes"]) ) self::$enableHtmlAttributes = $confset["wgSmjEnableHtmlAttributes"];
 			if (isset($confset["wgSmjAllowIndent"]) ) self::$allowIndent = $confset["wgSmjAllowIndent"];
 		}
+
+		self::$displayMath = $wgOut->getJsConfigVars()["wgSmjDisplayMath"];
+		self::$inlineMath = array_merge($wgOut->getJsConfigVars()["wgSmjExtraInlineMath"], [['[math]', '[/math]']]);
+		self::$directMathJax = $wgOut->getJsConfigVars()["wgSmjDirectMathJax"];
 
 		$wgOut->addModules( [ 'ext.SimpleMathJax' ] );
 		$wgOut->addModules( [ 'ext.SimpleMathJax.mobile' ] ); // For MobileFrontend
@@ -119,7 +127,7 @@ MWDebug::init();
 		return [$element, 'markerType'=>'nowiki'];
 	}
 
-	public static function onInternalParseBeforeLinks( Parser &$parser, &$text, $stripState ) {
+	public static function onParserAfterParse( Parser &$parser, &$text, $stripState ) {
 		static $marker_index = 1;//MWDebug::log($marker_index);
 
 		if( !self::$allowIndent ) {
@@ -127,8 +135,12 @@ MWDebug::init();
 		}
 
 		//MWDebug::log(self::findTexRanges($text));
-		$marker_pattern = Parser::MARKER_PREFIX . '.*?' . Parser::MARKER_SUFFIX;
-		$block_syntax_pattern = '/\n[\s\n]*\n|' . $marker_pattern . '\s*/';
+		$block_tag_pattern = '\<\/?(?:p|div|blockquote|center)(?:\s[^>]*)?\>';
+		$block_syntax_pattern = '/\n[\s\n]*\n|';  # blank lines
+		$block_syntax_pattern .= '[^\n]*\<p(?:\s[^>]*)?\>.*?(?=' . $block_tag_pattern . ')|';
+						# The opening p tag groups the text that follows into a p element regardless of indentation
+		$block_syntax_pattern .= '[^\n]*' . $block_tag_pattern . '[^\n]*/';
+						# Block element tags leave the text on that line separate from the preceding and following paragraphs
 
 		$ret = self::preg_explode($block_syntax_pattern, $text);
 		$paragraphs = $ret['tokens'];
@@ -142,10 +154,8 @@ MWDebug::init();
 			$prev_end = 0;
 			foreach ($matches as $match) {
 				$parts[] = substr($para, $prev_end, $match['start'] - $prev_end);
-				$marker = Parser::MARKER_PREFIX . '-smjrawtex-' . sprintf( '%08X', $marker_index++ ) . Parser::MARKER_SUFFIX;
 				$content = substr($para, $match['start'], $match['end'] - $match['start']);MWDebug::log($content);
-				$stripState->addNoWiki($marker, $content, 'nowiki');
-				$parts[] = $marker;
+				$parts[] = str_replace("\n ", "\n&#32;", $content);
 				$prev_end = $match['end'];
 			}
 			$parts[] = substr($para, $prev_end);
@@ -170,28 +180,28 @@ MWDebug::init();
 			$parts[] = $token;
 			if (isset($delimiters[$i])) {
 				$parts[] = $delimiters[$i];
+				if (strpos($delimiters[$i], 'div')) MWDebug::log($delimiters[$i]);
 			}
 		}
 		return implode('', $parts);
 	}
 
 	private static function findTexRanges( string $text ): array {
-		global $wgOut;
-		$displayMath = $wgOut->getJsConfigVars()["wgSmjDisplayMath"];
-		$inlineMath = array_merge($wgOut->getJsConfigVars()["wgSmjExtraInlineMath"], [['[math]', '[/math]']]);
-		$delimiters = array_merge($displayMath, $inlineMath);
+		$delimiters = array_merge(self::$displayMath, self::$inlineMath);
 		$delimiter_map = [];
 		foreach ($delimiters as $delim) {
 			$delimiter_map[$delim[0]] = $delim[1];
 		}
 
 		# Build opening delimiter pattern
+		$marker_pattern = Parser::MARKER_PREFIX . '.*?' . Parser::MARKER_SUFFIX;
 		$open_delimiters = implode('|', array_map(function ($delim) { return preg_quote($delim[0], '/'); }, $delimiters));
-		if ($wgOut->getJsConfigVars()["wgSmjDirectMathJax"] == "full") {
+		$start_pattern = '/^ .*$|';
+		if (self::$directMathJax == "full") {
 			# processEscapes = true
-		} else {
+			$start_pattern .= '\\\\[\\\\$]|';
 		}
-		$start_pattern = "/^ .*$|\\\\begin\s*\{.*?\}|{$open_delimiters}/m";
+		$start_pattern .= $marker_pattern . '|\\\\begin\s*\{.*?\}|' . $open_delimiters . '/m';
 
 		$ranges = [];
 		$offset = 0;
@@ -203,8 +213,12 @@ MWDebug::init();
 			$ret = self::preg_match_until($start_pattern, $text, function($matches, $offset) {
 				if ($matches[0][0][0] === ' ') {
 					return false;
+				} else if ($matches[0][0][0] === "\x7f") {
+					return false;
+				} else if ($matches[0][0] === '\\\\' || $matches[0][0] === '\\$') {
+					return false;
 				}
-				return true;
+				return true;  # success
 			}, $result, $offset);
 			if (!$ret) {
 				break;
@@ -214,10 +228,11 @@ MWDebug::init();
 			# Matched one of the opening delimiters
 			# Pattern to search for closing delimiter or unescaped braces
 			if (preg_match('/^\\\\begin\s*\{(.*?)\}$/', $result[0][0], $subresult)) {
-				$brace_pattern = '/(\\\\end\s*\{' . preg_quote($subresult[1], '/') . '\}|\<\/?[bi]\>|\\\\[\\\\{}]|[{}])/';
+				$brace_pattern = '/(\\\\end\s*\{' . preg_quote($subresult[1], '/') . '\}|';
 			} else {
-				$brace_pattern = '/(' . preg_quote($delimiter_map[$result[0][0]], '/') . '|\<\/?[bi]\>|\\\\[\\\\{}]|[{}])/';
+				$brace_pattern = '/(' . preg_quote($delimiter_map[$result[0][0]], '/') . '|';
 			}
+			$brace_pattern .= $marker_pattern . '\<(\/?[-\w]+)[^>]*\>|\\\\[\\\\{}]|[{}])/';
 
 			$offset = $match_offset + strlen($result[0][0]);
 			$braces = 0;
@@ -235,12 +250,18 @@ MWDebug::init();
 				} else if (preg_match('/^\\\\[\\\\{}]$/', $matches[0][0])) {
 					return false;
 				} else if ($matches[0][0][0] === '<') {
-					return true;
+					if (strpos($matches[0][0], 'span')) MWDebug::log($matches[0][0]);
+					if ($matches[1][0] === 'br' || $matches[1][0] === 'wbr') {
+						return false;
+					}  # Not supported: Inconsistent closing span tags that will eventually be removed but still exist at this point
+					return true;  # decline
+				} else if ($matches[0][0][0] === "\x7f") {
+					return false;
 				}
 				if ($braces > 0) {
 					return false;
 				}
-				return true;
+				return true;  # success
 			}, $result, $offset);
 			if (!$ret) {
 				continue;
