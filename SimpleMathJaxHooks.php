@@ -127,7 +127,7 @@ MWDebug::init();
 		return [$element, 'markerType'=>'nowiki'];
 	}
 
-	public static function onParserAfterParse( Parser &$parser, &$text, $stripState ) {
+	public static function onInternalParseBeforeLinks( Parser &$parser, &$text, $stripState ) {
 		static $marker_index = 1;//MWDebug::log($marker_index);
 
 		if( !self::$allowIndent ) {
@@ -154,8 +154,29 @@ MWDebug::init();
 			$prev_end = 0;
 			foreach ($matches as $match) {
 				$parts[] = substr($para, $prev_end, $match['start'] - $prev_end);
+				$marker = Parser::MARKER_PREFIX . '-smjrawtex-' . sprintf( '%08X', $marker_index++ ) . Parser::MARKER_SUFFIX;
 				$content = substr($para, $match['start'], $match['end'] - $match['start']);MWDebug::log($content);
-				$parts[] = str_replace("\n ", "\n&#32;", $content);
+				$content = $stripState->unstripGeneral($content);
+				$stripState->addNoWiki($marker, $content, 'nowiki');
+				$parts[] = $marker;
+				$prev_end = $match['end'];
+			}
+			$parts[] = substr($para, $prev_end);
+			$para = implode('', $parts);
+		}
+		foreach ($delimiters as &$para) {
+			if (trim($para) === '') continue;
+
+			$matches = self::findTexRanges($para, false);
+			$parts = [];
+			$prev_end = 0;
+			foreach ($matches as $match) {
+				$parts[] = substr($para, $prev_end, $match['start'] - $prev_end);
+				$marker = Parser::MARKER_PREFIX . '-smjrawtex-' . sprintf( '%08X', $marker_index++ ) . Parser::MARKER_SUFFIX;
+				$content = substr($para, $match['start'], $match['end'] - $match['start']);MWDebug::log($content);
+				$content = $stripState->unstripGeneral($content);
+				$stripState->addNoWiki($marker, $content, 'nowiki');
+				$parts[] = $marker;
 				$prev_end = $match['end'];
 			}
 			$parts[] = substr($para, $prev_end);
@@ -186,7 +207,7 @@ MWDebug::init();
 		return implode('', $parts);
 	}
 
-	private static function findTexRanges( string $text ): array {
+	private static function findTexRanges( string $text, bool $indentIsPre = true ): array {
 		$delimiters = array_merge(self::$displayMath, self::$inlineMath);
 		$delimiter_map = [];
 		foreach ($delimiters as $delim) {
@@ -196,7 +217,10 @@ MWDebug::init();
 		# Build opening delimiter pattern
 		$marker_pattern = Parser::MARKER_PREFIX . '.*?' . Parser::MARKER_SUFFIX;
 		$open_delimiters = implode('|', array_map(function ($delim) { return preg_quote($delim[0], '/'); }, $delimiters));
-		$start_pattern = '/^ .*$|';
+		$start_pattern = '/';
+		if ($indentIsPre) {
+			$start_pattern .= '^ .*$|';
+		}
 		if (self::$directMathJax == "full") {
 			# processEscapes = true
 			$start_pattern .= '\\\\[\\\\$]|';
