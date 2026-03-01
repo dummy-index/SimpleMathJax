@@ -142,32 +142,13 @@ MWDebug::init();
 		$block_syntax_pattern .= '[^\n]*' . $block_tag_pattern . '[^\n]*/';
 						# Block element tags leave the text on that line separate from the preceding and following paragraphs
 
-		$ret = self::preg_explode($block_syntax_pattern, $text);
-		$paragraphs = $ret['tokens'];
-		$delimiters = $ret['delimiters'];
+		$paragraphs = self::preg_split_with_delimiters($block_syntax_pattern, $text);
 
-		foreach ($paragraphs as &$para) {
+		foreach ($paragraphs as $i => &$para) {
 			if (trim($para) === '') continue;
 
-			$matches = self::findTexRanges($para);//MWDebug::log($matches);
-			$parts = [];
-			$prev_end = 0;
-			foreach ($matches as $match) {
-				$parts[] = substr($para, $prev_end, $match['start'] - $prev_end);
-				$marker = Parser::MARKER_PREFIX . '-smjrawtex-' . sprintf( '%08X', $marker_index++ ) . Parser::MARKER_SUFFIX;
-				$content = substr($para, $match['start'], $match['end'] - $match['start']);MWDebug::log($content);
-				$content = $stripState->unstripGeneral($content);
-				$stripState->addNoWiki($marker, $content, 'nowiki');
-				$parts[] = $marker;
-				$prev_end = $match['end'];
-			}
-			$parts[] = substr($para, $prev_end);
-			$para = implode('', $parts);
-		}
-		foreach ($delimiters as &$para) {
-			if (trim($para) === '') continue;
-
-			$matches = self::findTexRanges($para, false);
+			$indentIsPre = ($i % 2 === 0);
+			$matches = self::findTexRanges($para, $indentIsPre);//MWDebug::log($matches);
 			$parts = [];
 			$prev_end = 0;
 			foreach ($matches as $match) {
@@ -183,28 +164,24 @@ MWDebug::init();
 			$para = implode('', $parts);
 		}
 
-		$text = self::rejoin_with_delimiters($paragraphs, $delimiters);
+		$text = implode('', $paragraphs);
 	}
 
-	private static function preg_explode(string $pattern, string $subject): array {
+	private static function preg_split_with_delimiters(string $pattern, string $subject): array {
 		preg_match_all($pattern, $subject, $matches, PREG_PATTERN_ORDER);
 		$delimiters = $matches[0];
 
 		$tokens = preg_split($pattern, $subject);
 
-		return [ 'tokens' => $tokens, 'delimiters' => $delimiters ];
-	}
-
-	private static function rejoin_with_delimiters(array $tokens, array $delimiters): string {
-		$parts = [];MWDebug::log($tokens[0]);
+		$result = [];MWDebug::log($tokens[0]);
 		foreach ($tokens as $i => $token) {
-			$parts[] = $token;
+			$result[] = $token;
 			if (isset($delimiters[$i])) {
-				$parts[] = $delimiters[$i];
+				$result[] = $delimiters[$i];
 				if (strpos($delimiters[$i], 'div')) MWDebug::log($delimiters[$i]);
 			}
 		}
-		return implode('', $parts);
+		return $result;
 	}
 
 	private static function findTexRanges( string $text, bool $indentIsPre = true ): array {
