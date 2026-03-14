@@ -1,0 +1,12 @@
+{
+	"@metadata": {
+		"authors": []
+	},
+	"simplemathJax-visualeditor-inspector-title": "Math formula",
+	"simplemathJax-visualeditor-inspector-formula-label": "LaTeX",
+	"simplemathJax-visualeditor-inspector-display-label": "Display",
+	"simplemathJax-visualeditor-display-default": "Default",
+	"simplemathJax-visualeditor-display-inline": "Inline",
+	"simplemathJax-visualeditor-display-block": "Block",
+	"simplemathJax-visualeditor-contextitem-quickedit": "Edit"
+}

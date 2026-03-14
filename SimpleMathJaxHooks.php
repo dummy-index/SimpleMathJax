@@ -12,6 +12,7 @@ class SimpleMathJaxHooks {
 			$wgSmjScale, $wgSmjDisplayAlign, $wgSmjWrapDisplaystyle,
 			$wgSmjEnableHtmlAttributes, $wgSmjConfigByRevision;
 
+		// config
 		$globalvars = [ "wgSmjUseCdn", "wgSmjDirectMathJax",
 				"wgSmjDisplayMath", "wgSmjExtraInlineMath", "wgSmjIgnoreHtmlClass",
 				"wgSmjScale", "wgSmjEnableMenu", "wgSmjDisplayAlign" ];
@@ -22,6 +23,7 @@ class SimpleMathJaxHooks {
 		self::$wrapDisplaystyle = $wgSmjWrapDisplaystyle;
 		self::$enableHtmlAttributes = $wgSmjEnableHtmlAttributes;
 
+		// revision-based config
 		$articlerev = (int)$wgOut->getRevisionId();
 		foreach ($wgSmjConfigByRevision as $confset) {
 			if ($articlerev == 0) break;
@@ -35,6 +37,11 @@ class SimpleMathJaxHooks {
 			if (isset($confset["wgSmjWrapDisplaystyle"]) ) self::$wrapDisplaystyle = $confset["wgSmjWrapDisplaystyle"];
 			if (isset($confset["wgSmjEnableHtmlAttributes"]) ) self::$enableHtmlAttributes = $confset["wgSmjEnableHtmlAttributes"];
 		}
+
+		// duplication of configs for parsing on VE
+		// The chem tag on VE is not implemented yet
+		$wgOut->addJsConfigVars( "wgSmjWrapDisplaystyle", self::$wrapDisplaystyle );
+		// VE assumes that the display attribute works
 
 		$wgOut->addModules( [ 'ext.SimpleMathJax' ] );
 		$wgOut->addModules( [ 'ext.SimpleMathJax.mobile' ] ); // For MobileFrontend

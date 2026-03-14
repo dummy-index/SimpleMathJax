@@ -1,6 +1,6 @@
 {
 	"name": "SimpleMathJax",
-	"version": "0.8.11",
+	"version": "0.8.11.ve",
 	"author": "jmnote",
 	"url": "https://www.mediawiki.org/wiki/Extension:SimpleMathJax",
 	"description": "render TeX between <code><nowiki><math></nowiki></code> and <code><nowiki></math></nowiki></code>",
@@ -26,15 +26,46 @@
 	"Hooks": {
 		"ParserFirstCallInit": "SimpleMathJaxHooks::onParserFirstCallInit"
 	},
+	"attributes": {
+		"VisualEditor": {
+			"PluginModules": [
+				"ext.SimpleMathJax.visualEditor"
+			]
+		}
+	},
 	"ResourceModules": {
 		"ext.SimpleMathJax": {
 			"scripts": ["resources/ext.SimpleMathJax.js"],
 			"targets": ["desktop", "mobile"]
+		},
+		"ext.SimpleMathJax.visualEditor": {
+			"scripts": [
+				"resources/ve-smj/ve.dm.SMJMathNode.js",
+				"resources/ve-smj/ve.ce.SMJMathNode.js",
+				"resources/ve-smj/ve.ui.SMJMathInspector.js",
+				"resources/ve-smj/ve.ui.SMJMathTools.js"
+			],
+			"dependencies": [
+				"ext.visualEditor.mwcore",
+				"ext.visualEditor.mwextensions"
+			],
+			"messages": [
+				"simplemathJax-visualeditor-inspector-title",
+				"simplemathJax-visualeditor-inspector-formula-label",
+				"simplemathJax-visualeditor-inspector-display-label",
+				"simplemathJax-visualeditor-display-default",
+				"simplemathJax-visualeditor-display-inline",
+				"simplemathJax-visualeditor-display-block",
+				"simplemathJax-visualeditor-contextitem-quickedit"
+			]
 		}
 	},
 	"ResourceFileModulePaths": {
 		"localBasePath": "",
 		"remoteExtPath": "SimpleMathJax"
+	},
+	"MessagesDirs": {
+		"SimpleMathJax": ["i18n"]
 	},
 	"manifest_version": 2
 }
