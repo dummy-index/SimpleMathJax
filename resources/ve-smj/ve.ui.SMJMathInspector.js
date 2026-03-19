@@ -109,8 +109,14 @@ ve.ui.SMJMathInspector.prototype.getTeardownProcess = function ( data ) {
  * @inheritdoc
  */
 ve.ui.SMJMathInspector.prototype.updateMwData = function ( mwData ) {
+	const tagName = mwData.name;
+	const orig = this.input.getValueAndWhitespace.bind( this.input );
+	this.input.getValueAndWhitespace = () => orig().replace( new RegExp( '<(/' + tagName + '\\s*>)', 'gi' ), '{<}$1' );
+
 	// Parent method (writes extsrc from this.input)
 	ve.ui.SMJMathInspector.super.prototype.updateMwData.call( this, mwData );
+
+	this.input.getValueAndWhitespace = orig;
 
 	const display = this.displaySelect.findSelectedItem().getData();
 	mwData.attrs.display = display !== 'default' ? display : undefined;
