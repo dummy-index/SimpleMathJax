@@ -8,5 +8,10 @@
 	"simplemathJax-visualeditor-display-default": "Default",
 	"simplemathJax-visualeditor-display-inline": "Inline",
 	"simplemathJax-visualeditor-display-block": "Block",
-	"simplemathJax-visualeditor-contextitem-quickedit": "Edit"
+	"simplemathJax-visualeditor-contextitem-quickedit": "Edit",
+	"smj-ve-rawmath-inspector-title": "Raw Math (MathJax)",
+	"smj-ve-rawmath-latex-label":     "LaTeX",
+	"smj-ve-rawmath-delim-label":     "Delimiter",
+	"smj-ve-rawmath-context-label":   "Edit math",
+	"smj-ve-rawmath-tool-title":      "Insert math"
 }

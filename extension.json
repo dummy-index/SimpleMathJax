@@ -29,7 +29,8 @@
 	"attributes": {
 		"VisualEditor": {
 			"PluginModules": [
-				"ext.SimpleMathJax.visualEditor"
+				"ext.SimpleMathJax.visualEditor",
+				"ext.SimpleMathJax.visualEditorRaw"
 			]
 		}
 	},
@@ -57,6 +58,26 @@
 				"simplemathJax-visualeditor-display-inline",
 				"simplemathJax-visualeditor-display-block",
 				"simplemathJax-visualeditor-contextitem-quickedit"
+			]
+		},
+		"ext.SimpleMathJax.visualEditorRaw": {
+			"scripts": [
+				"resources/ve-smj-raw/ve.dm.SMJRawMathNode.js",
+				"resources/ve-smj-raw/ve.ce.SMJRawMathCENode.js",
+				"resources/ve-smj-raw/ve.ui.SMJRawMathInspector.js",
+				"resources/ve-smj-raw/ve.ui.SMJRawMathTools.js",
+				"resources/ve-smj-raw/ve.init.SMJRawMathSetup.js"
+			],
+			"messages": [
+				"smj-ve-rawmath-inspector-title",
+				"smj-ve-rawmath-latex-label",
+				"smj-ve-rawmath-delim-label",
+				"smj-ve-rawmath-context-label",
+				"smj-ve-rawmath-tool-title"
+			],
+			"dependencies": [
+				"ext.visualEditor.mwcore",
+				"ext.SimpleMathJax"
 			]
 		}
 	},
