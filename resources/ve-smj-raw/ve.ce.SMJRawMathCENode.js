@@ -41,9 +41,9 @@ ve.ce.SMJRawMathCENode.static.primaryCommandName = 'smjRawMath';
  */
 ve.ce.SMJRawMathCENode.prototype.getRawSource = function () {
 	var attrs = this.model.getAttributes();
-	return ( attrs.delimOpen || '$' ) +
+	return ( attrs.delimOpen || '' ) +
 	       ( attrs.latex     || ''  ) +
-	       ( attrs.delimClose || '$' );
+	       ( attrs.delimClose || '' );
 };
 
 /**

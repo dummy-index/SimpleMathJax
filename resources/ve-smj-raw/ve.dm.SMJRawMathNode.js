@@ -20,8 +20,8 @@ ve.dm.SMJRawMathNode.static.toDataElement = function ( domElements ) {
         type: 'smjRawMath',
         attributes: {
             latex:      el.getAttribute( 'data-smj-latex' )      || '',
-            delimOpen:  el.getAttribute( 'data-smj-delim-open' ) || '$',
-            delimClose: el.getAttribute( 'data-smj-delim-close' ) || '$'
+            delimOpen:  el.getAttribute( 'data-smj-delim-open' ) || '',
+            delimClose: el.getAttribute( 'data-smj-delim-close' ) || ''
         }
     };
 };

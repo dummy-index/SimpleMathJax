@@ -62,6 +62,7 @@
 		},
 		"ext.SimpleMathJax.visualEditorRaw": {
 			"scripts": [
+				"resources/ve-smj-raw/ve.smj.RawMathValidator.js",
 				"resources/ve-smj-raw/ve.dm.SMJRawMathNode.js",
 				"resources/ve-smj-raw/ve.ce.SMJRawMathCENode.js",
 				"resources/ve-smj-raw/ve.ui.SMJRawMathInspector.js",
@@ -73,7 +74,9 @@
 				"smj-ve-rawmath-latex-label",
 				"smj-ve-rawmath-delim-label",
 				"smj-ve-rawmath-context-label",
-				"smj-ve-rawmath-tool-title"
+				"smj-ve-rawmath-tool-title",
+				"smj-ve-rawmath-error-braces",
+				"smj-ve-rawmath-error-unrecoverable"
 			],
 			"dependencies": [
 				"ext.visualEditor.mwcore",
