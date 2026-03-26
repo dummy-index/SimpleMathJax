@@ -18,6 +18,10 @@ ve.ce.SMJRawMathCENode = function VeCeSMJRawMathCENode( model, config ) {
 		// MathJax が typeset する要素を特定できるようにしておく
 		.attr( 'data-smj-ce', 'raw' );
 
+	// typesetPromise の実行状態管理
+	this._mjRunning = false;
+	this._updatePending = false;
+
 	// 初回レンダリング
 	this.update();
 };
@@ -48,32 +52,46 @@ ve.ce.SMJRawMathCENode.prototype.getRawSource = function () {
 
 /**
  * MathJaxでレンダリングする。
- * Tag extensionルートの update() と同じキャッシュバイパスパターン。
  *
- * TODO: ve.ce.SMJMathNode.prototype.update と共通化できる。
- *       共通基底に ve.ce.SMJAbstractMathNode を作り、
- *       getRawSource() だけをオーバーライドする構成が理想。
  */
 ve.ce.SMJRawMathCENode.prototype.update = function () {
-	var rawSource = this.getRawSource();
-	var $el       = this.$element;
-
-	// テキストとしてセットしてから MathJax に渡す
-	// （前回のレンダリング結果 mjx-container を一旦消す）
-	$el.empty().text( rawSource );
-
-	if ( !window.MathJax || !MathJax.typesetPromise ) {
-		// MathJax 未ロードなら生ソースのまま表示してフォールバック
+	if ( this._mjRunning ) {
+		// 実行中 → 完了後に再実行するよう予約するだけ
+		this._updatePending = true;
 		return;
 	}
 
-	// typesetClear でキャッシュをバイパスしてから typeset
-	// （Tag extensionルートで確認済みのパターン）
-	var el = $el[ 0 ];
+	if ( !window.MathJax || !MathJax.typesetPromise ) {
+		// MathJax 未ロードなら生ソースのまま表示してフォールバック
+		this.$element.text( this.getRawSource() );
+		return;
+	}
+
+	var el        = this.$element[ 0 ];
+	var rawSource = this.getRawSource();
+	var self      = this;
+
+	// DOM を更新してから typeset
 	MathJax.typesetClear( [ el ] );
-	MathJax.typesetPromise( [ el ] ).catch( function ( err ) {
-		mw.log.warn( '[SMJRawMath] MathJax typesetPromise failed:', err );
-	} );
+	// テキストとしてセットしてから MathJax に渡す
+	// （前回のレンダリング結果 mjx-container を一旦消す）
+	this.$element.empty().text( rawSource );
+
+	this._mjRunning     = true;
+	this._updatePending = false;
+
+	MathJax.typesetPromise( [ el ] )
+		.then( function () {
+			self._mjRunning = false;
+			if ( self._updatePending ) {
+				// 実行中にリクエストが来ていたので再実行
+				self.update();
+			}
+		} )
+		.catch( function ( err ) {
+			self._mjRunning = false;
+			mw.log.warn( '[SMJRawMath] MathJax typesetPromise failed:', err );
+		} );
 };
 
 // ------------------------------------------------------------
@@ -91,6 +109,7 @@ ve.ce.SMJRawMathCENode.prototype.onSetup = function () {
 };
 
 ve.ce.SMJRawMathCENode.prototype.onTeardown = function () {
+	this._updatePending = false;
 	this.model.disconnect( this );
 	ve.ce.SMJRawMathCENode.super.prototype.onTeardown.call( this );
 };
