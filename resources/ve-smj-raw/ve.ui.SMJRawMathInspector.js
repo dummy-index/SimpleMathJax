@@ -28,7 +28,7 @@ ve.ui.SMJRawMathInspector.prototype.initialize = function () {
 
     this.delimSelect = new OO.ui.DropdownInputWidget( {
         options: [
-            { data: 'begin-end', label: '(you should type \\begin{} ... \\end{})'    },
+            { data: 'begin-end', label: '(you should keep \\begin{} ... \\end{})'    },
             { data: 'dollar-block',  label: '$$…$$ (block)'    },
             { data: 'paren',         label: '\\(…\\) (inline)' },
             { data: 'bracket',       label: '\\[…\\] (block)'   }
@@ -65,8 +65,6 @@ ve.ui.SMJRawMathInspector.prototype.initialize = function () {
 ve.ui.SMJRawMathInspector.prototype._validateAndShowError = function () {
     var latex      = this.latexInput.getValue();
     var pair       = this.delimKeyToPair( this.delimSelect.getValue() );
-    var isBeginEnd = ( pair.delimOpen === '' );
-    if ( isBeginEnd ) latex = latex.replace(/[\n\s]+$/, '');
     var rawSource  = pair.delimOpen + latex + pair.delimClose;
     var result     = ve.smj.RawMathValidator.validate( rawSource );
 
@@ -151,8 +149,6 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 			var surfaceModel = this.getManager().getSurface().getModel();
 			var latex     = this.latexInput.getValue();
 			var pair      = this.delimKeyToPair( this.delimSelect.getValue() );
-			var isBeginEnd = ( pair.delimOpen === '' );
-			if ( isBeginEnd ) latex = latex.replace(/[\n\s]+$/, '');
 			var rawSource = pair.delimOpen + latex + pair.delimClose;
 			var validation = ve.smj.RawMathValidator.validate( rawSource );
 
@@ -173,18 +169,7 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 				latex = completed.latex;
 			}
 
-			// ライブプレビューの最終状態と確定値が異なる場合のみ
-			// 追加でchangeAttributesを呼ぶ
-			// （補完が行われた場合など）
-			var currentAttrs = this.selectedNode && this.selectedNode.getAttributes();
-			var needsUpdate  = !this.selectedNode ||
-							currentAttrs.latex      !== latex ||
-							currentAttrs.delimOpen  !== pair.delimOpen ||
-							currentAttrs.delimClose !== pair.delimClose;
-
-			if ( !needsUpdate ) {
-				;
-			} else if ( this.selectedNode ) {
+			if ( this.selectedNode ) {
 				surfaceModel.getFragment().changeAttributes( {
 					latex:      latex,
 					delimOpen:  pair.delimOpen,

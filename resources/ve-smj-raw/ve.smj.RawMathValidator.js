@@ -18,21 +18,26 @@ ve.smj.RawMathValidator = {
     // ----------------------------------------------------------------
     // 検証
     //
-    // rawSource を findMath にかけて、MathItemの開始位置が 0 かつ
+    // rawSource を trim 後 findMath にかけて、MathItemの開始位置が 0 かつ
     // 終了位置が rawSource.length に一致するかを確認する。
     //
     // @param  {string} rawSource  delimOpen + latex + delimClose
     // @return {string}  'ok' | 'incomplete' | 'unavailable'
     // ----------------------------------------------------------------
     validate: function ( rawSource ) {
+        // FIXME: delimOpenの先頭がスペースな場合など（つまりMathJaxが
+        // そう設定されていてそう切り出してきた）はそれをそのまま処理
+        // しないといけない
+        return this._validate( rawSource.trim() );
+    },
+
+    _validate: function ( rawSource ) {
         var inputJax = this._getInputJax();
         if ( !inputJax ) return 'unavailable';
 
         var items;
         try {
-            items = inputJax.findMath( [ rawSource ] ).filter( function(mi) {
-                return mi.display !== null;
-            } );
+            items = inputJax.findMath( [ rawSource ] );
         } catch ( e ) {
             mw.log.warn( '[SMJRawMath] findMath error in validate:', e );
             return 'unavailable';
@@ -43,12 +48,12 @@ ve.smj.RawMathValidator = {
         }
 
         var first = items[ 0 ];
-        if ( first.start.n !== 0 ) {
+        if ( first.display === null || first.start.n !== 0 ) {
             return 'incomplete';
         }
 
         var last = items[ items.length - 1 ];
-        if ( last.end.n !== rawSource.length ) {
+        if ( last.display === null || last.end.n !== rawSource.length ) {
             return 'incomplete';
         }
 
@@ -68,26 +73,26 @@ ve.smj.RawMathValidator = {
     // @param  {string} latex
     // @param  {string} delimOpen
     // @param  {string} delimClose
-    // @return {{ latex: string | null, count: number, reason: string }}
+    // @return {{ latex: string, count: number, reason: string }|{ latex: null, reason: string }}
     //         補完成功時は補完後のlatexと挿入した}の個数
     //         補完不能（\end消失等）の場合は null
     // ----------------------------------------------------------------
     complete: function ( latex, delimOpen, delimClose ) {
         var MAX_ITER  = 20;
         var isBeginEnd = ( delimOpen === '' );
-        // ユーザー入力がマーカーを含んでいると誤動作するため除去
+        // ユーザー入力がマーカーを含んでいると誤動作するため無効化
         var current   = latex.replace(/\%ve-closer\%\n/g, '%%\n');
 
         if ( isBeginEnd ) {
-            if ( current.indexOf( '\\end' ) === -1
-                 || current.lastIndexOf( '\\end' ) > current.lastIndexOf( '{' ) ) {
+            current = current.trim();
+            if ( !current.match( /\\end\s*{[^}]*}$/ ) ) {
                 return { latex: null, reason: 'missing-end' };
             }
         }
 
         for ( var i = 0; i < MAX_ITER; i++ ) {
             var raw = delimOpen + current + delimClose;
-            var result = this.validate( raw );
+            var result = this._validate( raw );
 
             if ( result === 'ok' ) {
                 return { latex: current, count: i, reason: 'ok' };
@@ -101,16 +106,16 @@ ve.smj.RawMathValidator = {
                 if ( isBeginEnd ) {
                     var endPos = current.lastIndexOf( '\\end' );
                     current = current.slice( 0, endPos ) +
-                              '\n%ve-closer%\n' +
+                              '%\n%ve-closer%\n' +
                               current.slice( endPos );
                 } else {
-                    current = current + '\n%ve-closer%\n';
+                    current = current + '%\n%ve-closer%\n';
                 }
             }
             // } を1個挿入
             var endPos = current.lastIndexOf( '%ve-closer%\n' );
             current = current.slice( 0, endPos ) +
-                      '}' +
+                      '} ' +
                       current.slice( endPos );
         }
 
@@ -119,7 +124,7 @@ ve.smj.RawMathValidator = {
     }
 };
 
-// マーカーとその直後の } を取り除くヘルパー
+// マーカーとその中の } を取り除くヘルパー
 ve.smj.RawMathValidator.stripCloserMarkers = function ( latex ) {
-    return latex.replace(/\n\}+\%ve-closer\%\n/g, '');
+    return latex.replace(/\%\n[} ]+\%ve-closer\%\n/g, '');
 };

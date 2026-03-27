@@ -34,6 +34,13 @@ ve.dm.SMJRawMathNode.static.toDomElements = function ( dataElement, doc, convert
 
     if ( converter.isForParser() ) {
         // 保存時：生テキストとしてParsoidに渡す
+        // wikitextにする際はtrimが必要
+        // ただしdelimOpenの先頭がスペースな場合など（つまりMathJaxが
+        // そう設定されていてそう切り出してきた）はそれをそのまま返さ
+        // ないといけない
+        if ( delimOpen === '' ) {
+            raw = raw.trim();
+        }
         return [ doc.createTextNode( raw ) ];
     }
 
