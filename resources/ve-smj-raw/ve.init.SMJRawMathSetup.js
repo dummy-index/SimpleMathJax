@@ -79,7 +79,6 @@ function collectReplacements( dmDoc ) {
 
         // コンテンツを持てるノードのみ対象
         // （paragraph, heading 等。table cell も含む）
-        // FIXME: （skipHtmlTagsで指定されているpre等も除外すること）
         var node = dmDoc.getDocumentNode().getNodeFromOffset( i + 1 );
         if ( !node || !node.canContainContent || !node.canContainContent() ) {
             i++;
@@ -88,24 +87,55 @@ function collectReplacements( dmDoc ) {
 
         var nodeRange = node.getRange();
 
+        // MathJax.skipHtmlTagsで指定されているpre等を除外する
+        // mwPreはコンテンツを持てるノードではない（中身をDMに展開しない）のでここに到達しない
+        if ( item.type === 'mwPreformatted' ) {
+            i = nodeRange.end;
+            continue;
+        }
+
         // ノード内をインラインノード境界で「テキストチャンク」に分割する
+        // span境界等（nowiki境界を除く）でも分割する
         // チャンク = { text: string, offsetMap: number[] }
         // offsetMap[j] = text[j] に対応するDMオフセット
         var chunks  = [];
         var curText = '';
         var curMap  = [];
+        var curAnnotations = '';
 
         for ( var j = nodeRange.start; j < nodeRange.end; j++ ) {
             var ch = data.getData( j );
 
-            // FIXME: （本当のspanの切り替わりでもチャンクを切り替える必要あり）
             // FIXME: （文字参照ノードは展開する）
             if ( typeof ch === 'string' ) {
+                var nextAnnotations = '';
+                if ( curAnnotations !== nextAnnotations ) {
+                    // ここでチャンクを確定する
+                    if ( curText.length ) {
+                        chunks.push( { text: curText, offsetMap: curMap } );
+                        curText = '';
+                        curMap  = [];
+                    }
+                    curAnnotations = nextAnnotations;
+                }
                 curText += ch;
                 curMap.push( j );
             } else if ( Array.isArray( ch ) && typeof ch[ 0 ] === 'string' ) {
                 // アノテーション付き文字 ['X', [annot,...]]
                 // FIXME: （skipHtmlTagsで指定されているcode等も除外すること）
+                var nextAnnotations = ch[1].filter( function ( anno ) {
+                    var obj = dmDoc.getStore().value( anno );
+                    return !( !Array.isArray( obj ) && obj.name === 'mwNowiki' );
+                } ).join();
+                if ( curAnnotations !== nextAnnotations ) {
+                    // ここでチャンクを確定する
+                    if ( curText.length ) {
+                        chunks.push( { text: curText, offsetMap: curMap } );
+                        curText = '';
+                        curMap  = [];
+                    }
+                    curAnnotations = nextAnnotations;
+                }
                 curText += ch[ 0 ];
                 curMap.push( j );
             } else if ( ch && typeof ch === 'object' && ch.type ) {
