@@ -10,11 +10,11 @@
 	"simplemathJax-visualeditor-display-block": "Block",
 	"simplemathJax-visualeditor-contextitem-quickedit": "Edit",
 	"smj-ve-rawmath-inspector-title": "Raw Math (MathJax)",
-	"smj-ve-rawmath-latex-label":     "LaTeX",
-	"smj-ve-rawmath-delim-label":     "Delimiter",
-	"smj-ve-rawmath-context-label":   "Edit math",
-	"smj-ve-rawmath-tool-title":      "Insert math",
-	"smj-ve-rawmath-error-braces":        "Warning: unbalanced braces. Will be auto-completed on save.",
-	"smj-ve-rawmath-error-missing-end":   "Error: \\end is missing. Cannot save.",
+	"smj-ve-rawmath-latex-label": "LaTeX",
+	"smj-ve-rawmath-delim-label": "Delimiter",
+	"smj-ve-rawmath-context-label": "Edit math",
+	"smj-ve-rawmath-tool-title": "Insert math",
+	"smj-ve-rawmath-error-braces": "Warning: unbalanced braces. Will be auto-completed on save.",
+	"smj-ve-rawmath-error-missing-end": "Error: \\end is missing. Cannot save.",
 	"smj-ve-rawmath-error-unrecoverable": "Error: unbalanced braces. Cannot save."
 }

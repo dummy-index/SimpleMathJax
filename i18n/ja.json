@@ -10,11 +10,11 @@
 	"simplemathJax-visualeditor-display-block": "ブロック",
 	"simplemathJax-visualeditor-contextitem-quickedit": "簡易編集",
 	"smj-ve-rawmath-inspector-title": "数式（MathJax直接）",
-	"smj-ve-rawmath-latex-label":     "LaTeX",
-	"smj-ve-rawmath-delim-label":     "デリミタ",
-	"smj-ve-rawmath-context-label":   "数式を編集",
-	"smj-ve-rawmath-tool-title":      "数式を挿入",
-	"smj-ve-rawmath-error-braces":        "波括弧のバランスが取れていません。保存時に自動補完されます。",
-	"smj-ve-rawmath-error-missing-end":   "エラー：\\end が見つかりません。保存できません。",
+	"smj-ve-rawmath-latex-label": "LaTeX",
+	"smj-ve-rawmath-delim-label": "デリミタ",
+	"smj-ve-rawmath-context-label": "数式を編集",
+	"smj-ve-rawmath-tool-title": "数式を挿入",
+	"smj-ve-rawmath-error-braces": "波括弧のバランスが取れていません。保存時に自動補完されます。",
+	"smj-ve-rawmath-error-missing-end": "エラー：\\end が見つかりません。保存できません。",
 	"smj-ve-rawmath-error-unrecoverable": "エラー：波括弧のバランスが取れていません。保存できません。"
 }

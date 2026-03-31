@@ -4,9 +4,12 @@
  * ContentEditable node for SMJRawMath (direct MathJax route).
  *
  * Tag extensionルートの ve.ce.SMJMathNode との差分：
- *   - 継承元が LeafNode + FocusableNode（AlienInlineCENode ではない）
- *   - LaTeX ソースを delimOpen/latex/delimClose 属性から組み立てる
- *   - それ以外のレンダリングロジックは共通化候補
+ * - 継承元が LeafNode + FocusableNode（AlienInlineCENode ではない）
+ * - LaTeX ソースを delimOpen/latex/delimClose 属性から組み立てる
+ * - それ以外のレンダリングロジックは共通化候補
+ *
+ * @param model
+ * @param config
  */
 ve.ce.SMJRawMathCENode = function VeCeSMJRawMathCENode( model, config ) {
 	ve.ce.SMJRawMathCENode.super.call( this, model, config );
@@ -27,9 +30,9 @@ ve.ce.SMJRawMathCENode = function VeCeSMJRawMathCENode( model, config ) {
 };
 
 OO.inheritClass( ve.ce.SMJRawMathCENode, ve.ce.LeafNode );
-OO.mixinClass(   ve.ce.SMJRawMathCENode, ve.ce.FocusableNode );
+OO.mixinClass( ve.ce.SMJRawMathCENode, ve.ce.FocusableNode );
 
-ve.ce.SMJRawMathCENode.static.name        = 'smjRawMath';
+ve.ce.SMJRawMathCENode.static.name = 'smjRawMath';
 ve.ce.SMJRawMathCENode.static.primaryCommandName = 'smjRawMath';
 
 // ------------------------------------------------------------
@@ -46,8 +49,8 @@ ve.ce.SMJRawMathCENode.static.primaryCommandName = 'smjRawMath';
 ve.ce.SMJRawMathCENode.prototype.getRawSource = function () {
 	var attrs = this.model.getAttributes();
 	return ( attrs.delimOpen || '' ) +
-	       ( attrs.latex     || ''  ) +
-	       ( attrs.delimClose || '' );
+		( attrs.latex || '' ) +
+		( attrs.delimClose || '' );
 };
 
 /**
@@ -67,9 +70,9 @@ ve.ce.SMJRawMathCENode.prototype.update = function () {
 		return;
 	}
 
-	var el        = this.$element[ 0 ];
+	var el = this.$element[ 0 ];
 	var rawSource = this.getRawSource();
-	var self      = this;
+	var self = this;
 
 	// DOM を更新してから typeset
 	MathJax.typesetClear( [ el ] );
@@ -77,7 +80,7 @@ ve.ce.SMJRawMathCENode.prototype.update = function () {
 	// （前回のレンダリング結果 mjx-container を一旦消す）
 	this.$element.empty().text( rawSource );
 
-	this._mjRunning     = true;
+	this._mjRunning = true;
 	this._updatePending = false;
 
 	MathJax.typesetPromise( [ el ] )

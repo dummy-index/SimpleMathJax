@@ -8,8 +8,8 @@ ve.ui.SMJRawMathInspector = function VeUiSMJRawMathInspector( config ) {
 // MWExtensionInspector は <tag>...</tag> 形式前提の処理を含むため。
 OO.inheritClass( ve.ui.SMJRawMathInspector, ve.ui.NodeInspector );
 
-ve.ui.SMJRawMathInspector.static.name    = 'smjRawMath';
-ve.ui.SMJRawMathInspector.static.title   =
+ve.ui.SMJRawMathInspector.static.name = 'smjRawMath';
+ve.ui.SMJRawMathInspector.static.title =
 	OO.ui.deferMsg( 'smj-ve-rawmath-inspector-title' );
 ve.ui.SMJRawMathInspector.static.modelClasses = [ ve.dm.SMJRawMathNode ];
 
@@ -18,44 +18,44 @@ ve.ui.SMJRawMathInspector.static.modelClasses = [ ve.dm.SMJRawMathNode ];
 // ------------------------------------------------------------
 
 ve.ui.SMJRawMathInspector.prototype.initialize = function () {
-    ve.ui.SMJRawMathInspector.super.prototype.initialize.call( this );
+	ve.ui.SMJRawMathInspector.super.prototype.initialize.call( this );
 
-    this.latexInput = new OO.ui.MultilineTextInputWidget( {
-        autosize: true,
-        rows: 3,
-        classes: [ 've-ui-smjRawMath-latexInput' ]
-    } );
+	this.latexInput = new OO.ui.MultilineTextInputWidget( {
+		autosize: true,
+		rows: 3,
+		classes: [ 've-ui-smjRawMath-latexInput' ]
+	} );
 
-    this.delimSelect = new OO.ui.DropdownInputWidget( {
-        options: [
-            { data: 'begin-end', label: '(you should keep \\begin{} ... \\end{})'    },
-            { data: 'dollar-block',  label: '$$…$$ (block)'    },
-            { data: 'paren',         label: '\\(…\\) (inline)' },
-            { data: 'bracket',       label: '\\[…\\] (block)'   }
-        ]
-    } );
+	this.delimSelect = new OO.ui.DropdownInputWidget( {
+		options: [
+			{ data: 'begin-end', label: '(you should keep \\begin{} ... \\end{})' },
+			{ data: 'dollar-block', label: '$$…$$ (block)' },
+			{ data: 'paren', label: '\\(…\\) (inline)' },
+			{ data: 'bracket', label: '\\[…\\] (block)' }
+		]
+	} );
 
-    // エラー表示ウィジェット
-    // 通常は非表示、波括弧不足を検出したら表示する
-    this.$errorMessage = $( '<div>' ).addClass(
-        've-ui-smjRawMath-errorMessage'
-    ).hide();
+	// エラー表示ウィジェット
+	// 通常は非表示、波括弧不足を検出したら表示する
+	this.$errorMessage = $( '<div>' ).addClass(
+		've-ui-smjRawMath-errorMessage'
+	).hide();
 
-    this.latexInput.connect( this, { change: 'onLatexChange' } );
-    this.delimSelect.connect( this, { change: 'onDelimChange' } );
+	this.latexInput.connect( this, { change: 'onLatexChange' } );
+	this.delimSelect.connect( this, { change: 'onDelimChange' } );
 
-    // $body ではなく this.container.$element に追加する
-    this.container.$element.append(
-        new OO.ui.FieldLayout( this.latexInput, {
-            label: mw.msg( 'smj-ve-rawmath-latex-label' ),
-            align: 'top'
-        } ).$element,
-        this.$errorMessage,
-        new OO.ui.FieldLayout( this.delimSelect, {
-            label: mw.msg( 'smj-ve-rawmath-delim-label' ),
-            align: 'top'
-        } ).$element
-    );
+	// $body ではなく this.container.$element に追加する
+	this.container.$element.append(
+		new OO.ui.FieldLayout( this.latexInput, {
+			label: mw.msg( 'smj-ve-rawmath-latex-label' ),
+			align: 'top'
+		} ).$element,
+		this.$errorMessage,
+		new OO.ui.FieldLayout( this.delimSelect, {
+			label: mw.msg( 'smj-ve-rawmath-delim-label' ),
+			align: 'top'
+		} ).$element
+	);
 };
 
 // ----------------------------------------------------------------
@@ -63,23 +63,23 @@ ve.ui.SMJRawMathInspector.prototype.initialize = function () {
 // ----------------------------------------------------------------
 
 ve.ui.SMJRawMathInspector.prototype._validateAndShowError = function () {
-    var latex      = this.latexInput.getValue();
-    var pair       = this.delimKeyToPair( this.delimSelect.getValue() );
-    var rawSource  = pair.delimOpen + latex + pair.delimClose;
-    var result     = ve.smj.RawMathValidator.validate( rawSource );
+	var latex = this.latexInput.getValue();
+	var pair = this.delimKeyToPair( this.delimSelect.getValue() );
+	var rawSource = pair.delimOpen + latex + pair.delimClose;
+	var result = ve.smj.RawMathValidator.validate( rawSource );
 
-    if ( result === 'incomplete' ) {
-        this.$errorMessage
-            .text( mw.msg( 'smj-ve-rawmath-error-braces' ) )
-            .show();
-    } else {
-        this.$errorMessage.hide();
-    }
+	if ( result === 'incomplete' ) {
+		this.$errorMessage
+			.text( mw.msg( 'smj-ve-rawmath-error-braces' ) )
+			.show();
+	} else {
+		this.$errorMessage.hide();
+	}
 
-    // Inspector のサイズを再計算
-    this.updateSize();
+	// Inspector のサイズを再計算
+	this.updateSize();
 
-    return result;
+	return result;
 };
 
 // ------------------------------------------------------------
@@ -94,9 +94,15 @@ ve.ui.SMJRawMathInspector.prototype._validateAndShowError = function () {
  * @return {string}
  */
 ve.ui.SMJRawMathInspector.prototype.delimPairToKey = function ( open, close ) {
-	if ( open === '$$'  && close === '$$'  ) return 'dollar-block';
-	if ( open === '\\(' && close === '\\)' ) return 'paren';
-	if ( open === '\\[' && close === '\\]' ) return 'bracket';
+	if ( open === '$$' && close === '$$' ) {
+		return 'dollar-block';
+	}
+	if ( open === '\\(' && close === '\\)' ) {
+		return 'paren';
+	}
+	if ( open === '\\[' && close === '\\]' ) {
+		return 'bracket';
+	}
 	return 'begin-end'; // デフォルト: 環境用自由記述欄
 };
 
@@ -108,10 +114,10 @@ ve.ui.SMJRawMathInspector.prototype.delimPairToKey = function ( open, close ) {
  */
 ve.ui.SMJRawMathInspector.prototype.delimKeyToPair = function ( key ) {
 	switch ( key ) {
-		case 'dollar-block': return { delimOpen: '$$',   delimClose: '$$'   };
-		case 'paren':        return { delimOpen: '\\(',  delimClose: '\\)'  };
-		case 'bracket':      return { delimOpen: '\\[',  delimClose: '\\]'  };
-		default:             return { delimOpen: '',     delimClose: ''     };
+		case 'dollar-block': return { delimOpen: '$$', delimClose: '$$' };
+		case 'paren': return { delimOpen: '\\(', delimClose: '\\)' };
+		case 'bracket': return { delimOpen: '\\[', delimClose: '\\]' };
+		default: return { delimOpen: '', delimClose: '' };
 	}
 };
 
@@ -135,7 +141,7 @@ ve.ui.SMJRawMathInspector.prototype.getSetupProcess = function ( data ) {
 			);
 			this.delimSelect.setValue(
 				this.delimPairToKey(
-					attrs.delimOpen  || '',
+					attrs.delimOpen || '',
 					attrs.delimClose || ''
 				)
 			);
@@ -147,8 +153,8 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 	if ( action === 'done' ) {
 		return new OO.ui.Process( function () {
 			var surfaceModel = this.getManager().getSurface().getModel();
-			var latex     = this.latexInput.getValue();
-			var pair      = this.delimKeyToPair( this.delimSelect.getValue() );
+			var latex = this.latexInput.getValue();
+			var pair = this.delimKeyToPair( this.delimSelect.getValue() );
 			var rawSource = pair.delimOpen + latex + pair.delimClose;
 			var validation = ve.smj.RawMathValidator.validate( rawSource );
 
@@ -158,9 +164,9 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 				);
 
 				if ( completed.latex === null ) {
-					var msgKey = completed.reason === 'missing-end'
-						? 'smj-ve-rawmath-error-missing-end'
-						: 'smj-ve-rawmath-error-unrecoverable';
+					var msgKey = completed.reason === 'missing-end' ?
+						'smj-ve-rawmath-error-missing-end' :
+						'smj-ve-rawmath-error-unrecoverable';
 					this.$errorMessage.text( mw.msg( msgKey ) ).show();
 					this.updateSize();
 					return new OO.ui.Error( mw.msg( msgKey ), { recoverable: true } );
@@ -171,8 +177,8 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 
 			if ( this.selectedNode ) {
 				surfaceModel.getFragment().changeAttributes( {
-					latex:      latex,
-					delimOpen:  pair.delimOpen,
+					latex: latex,
+					delimOpen: pair.delimOpen,
 					delimClose: pair.delimClose
 				} );
 			} else {
@@ -180,8 +186,8 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 					{
 						type: 'smjRawMath',
 						attributes: {
-							latex:      latex,
-							delimOpen:  pair.delimOpen,
+							latex: latex,
+							delimOpen: pair.delimOpen,
 							delimClose: pair.delimClose
 						}
 					},
@@ -219,7 +225,9 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 ve.ui.SMJRawMathInspector.prototype.onLatexChange = function () {
 	this._validateAndShowError();
 
-	if ( !this.selectedNode ) return;
+	if ( !this.selectedNode ) {
+		return;
+	}
 	this.getManager()
 		.getSurface()
 		.getModel()
@@ -230,7 +238,9 @@ ve.ui.SMJRawMathInspector.prototype.onLatexChange = function () {
 ve.ui.SMJRawMathInspector.prototype.onDelimChange = function () {
 	this._validateAndShowError();
 
-	if ( !this.selectedNode ) return;
+	if ( !this.selectedNode ) {
+		return;
+	}
 	var pair = this.delimKeyToPair( this.delimSelect.getValue() );
 	this.getManager()
 		.getSurface()

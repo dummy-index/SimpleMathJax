@@ -67,12 +67,12 @@ ve.ce.SMJMathNode.prototype.update = function ( config, staged ) {
  * @return {jQuery.Promise}
  */
 ve.ce.SMJMathNode.prototype.generateContents = function ( config ) {
-	console.log('generateContents called', this.getModel().getAttribute('mw'));
+	console.log( 'generateContents called', this.getModel().getAttribute( 'mw' ) );
 	const deferred = ve.createDeferred();
 	const mwData = ve.copy( this.getModel().getAttribute( 'mw' ) );
-	const extsrc = config && config.extsrc !== undefined
-		? config.extsrc
-		: ( ve.getProp( mwData, 'body', 'extsrc' ) || '' );
+	const extsrc = config && config.extsrc !== undefined ?
+		config.extsrc :
+		( ve.getProp( mwData, 'body', 'extsrc' ) || '' );
 	const attrs = ( config && config.attrs ) || mwData.attrs || {};
 	const display = attrs.display;
 
@@ -88,7 +88,7 @@ ve.ce.SMJMathNode.prototype.generateContents = function ( config ) {
 		wrapped = '\\begin{displaymjx}' + extsrc + '\n\\end{displaymjx}';
 	} else if ( display === 'inline' ) {
 		wrapped = '[math]' + extsrc + '[/math]';
-	} else if ( display === undefined && mw.config.get('wgSmjPreloadChem') ){
+	} else if ( display === undefined && mw.config.get( 'wgSmjPreloadChem' ) ) {
 		wrapped = '[math]\\displaystyle{' + extsrc + '\n}[/math]';
 	} else {
 		wrapped = '[math]' + extsrc + '[/math]';
