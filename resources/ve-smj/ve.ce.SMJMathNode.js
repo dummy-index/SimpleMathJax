@@ -88,7 +88,7 @@ ve.ce.SMJMathNode.prototype.generateContents = function ( config ) {
 		wrapped = '\\begin{displaymjx}' + extsrc + '\n\\end{displaymjx}';
 	} else if ( display === 'inline' ) {
 		wrapped = '[math]' + extsrc + '[/math]';
-	} else if ( display === undefined && mw.config.get( 'wgSmjPreloadChem' ) ) {
+	} else if ( display === undefined && mw.config.get( 'wgSmjWrapDisplaystyle' ) ) {
 		wrapped = '[math]\\displaystyle{' + extsrc + '\n}[/math]';
 	} else {
 		wrapped = '[math]' + extsrc + '[/math]';
