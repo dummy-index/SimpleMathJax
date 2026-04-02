@@ -13,7 +13,7 @@ ve.ui.SMJRawMathContextItem.static.icon = 'mathematics';
 ve.ui.SMJRawMathContextItem.static.label =
 	OO.ui.deferMsg( 'smj-ve-rawmath-context-label' );
 ve.ui.SMJRawMathContextItem.static.modelClasses = [ ve.dm.SMJRawMathNode ];
-ve.ui.SMJRawMathContextItem.static.commandName = 'smjRawMath';
+ve.ui.SMJRawMathContextItem.static.commandName = 'smjRawMathInspector';
 ve.ui.SMJRawMathContextItem.static.embeddable = false;
 
 ve.ui.contextItemFactory.register( ve.ui.SMJRawMathContextItem );
@@ -31,7 +31,7 @@ ve.ui.SMJRawMathTool.static.icon = 'mathematics';
 ve.ui.SMJRawMathTool.static.title =
 	OO.ui.deferMsg( 'smj-ve-rawmath-tool-title' );
 ve.ui.SMJRawMathTool.static.modelClasses = [ ve.dm.SMJRawMathNode ];
-ve.ui.SMJRawMathTool.static.commandName = 'smjRawMath';
+ve.ui.SMJRawMathTool.static.commandName = 'smjRawMathInspector';
 
 ve.ui.toolFactory.register( ve.ui.SMJRawMathTool );
 
@@ -39,16 +39,16 @@ ve.ui.toolFactory.register( ve.ui.SMJRawMathTool );
 
 ve.ui.commandRegistry.register(
 	new ve.ui.Command(
-		'smjRawMath', // コマンド名
+		'smjRawMathInspector', // コマンド名
 		'window', 'open', // action: windowManager.open()
-		{ args: [ 'smjRawMath' ], supportedSelections: [ 'linear' ] }
+		{ args: [ 'smjRawMathInspector' ], supportedSelections: [ 'linear' ] }
 	)
 );
 
 ve.ui.sequenceRegistry.register(
 	new ve.ui.Sequence(
-		'smjRawMath', // シーケンス名
-		'smjRawMath', // コマンド名
+		'wikitextSmjRawMath', // シーケンス名
+		'smjRawMathInspector', // コマンド名
 		'$$', // トリガー文字
 		2 // トリガー後に削除する文字数
 	)

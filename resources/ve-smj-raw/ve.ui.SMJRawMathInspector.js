@@ -8,7 +8,7 @@ ve.ui.SMJRawMathInspector = function VeUiSMJRawMathInspector( config ) {
 // MWExtensionInspector は <tag>...</tag> 形式前提の処理を含むため。
 OO.inheritClass( ve.ui.SMJRawMathInspector, ve.ui.NodeInspector );
 
-ve.ui.SMJRawMathInspector.static.name = 'smjRawMath';
+ve.ui.SMJRawMathInspector.static.name = 'smjRawMathInspector';
 ve.ui.SMJRawMathInspector.static.title =
 	OO.ui.deferMsg( 'smj-ve-rawmath-inspector-title' );
 ve.ui.SMJRawMathInspector.static.modelClasses = [ ve.dm.SMJRawMathNode ];
