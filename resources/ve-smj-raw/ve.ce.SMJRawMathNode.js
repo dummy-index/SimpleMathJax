@@ -1,4 +1,4 @@
-// ve.ce.SMJRawMathCENode.js
+// ve.ce.SMJRawMathNode.js
 
 /**
  * ContentEditable node for SMJRawMath (direct MathJax route).
@@ -11,13 +11,13 @@
  * @param model
  * @param config
  */
-ve.ce.SMJRawMathCENode = function VeCeSMJRawMathCENode( model, config ) {
-	ve.ce.SMJRawMathCENode.super.call( this, model, config );
+ve.ce.SMJRawMathNode = function VeCeSMJRawMathNode( model, config ) {
+	ve.ce.SMJRawMathNode.super.call( this, model, config );
 
 	ve.ce.FocusableNode.call( this );
 
 	this.$element
-		.addClass( 've-ce-smjRawMathCENode' )
+		.addClass( 've-ce-smjRawMathNode' )
 		// MathJax が typeset する要素を特定できるようにしておく
 		.attr( 'data-smj-ce', 'raw' );
 
@@ -29,11 +29,11 @@ ve.ce.SMJRawMathCENode = function VeCeSMJRawMathCENode( model, config ) {
 	this.update();
 };
 
-OO.inheritClass( ve.ce.SMJRawMathCENode, ve.ce.LeafNode );
-OO.mixinClass( ve.ce.SMJRawMathCENode, ve.ce.FocusableNode );
+OO.inheritClass( ve.ce.SMJRawMathNode, ve.ce.LeafNode );
+OO.mixinClass( ve.ce.SMJRawMathNode, ve.ce.FocusableNode );
 
-ve.ce.SMJRawMathCENode.static.name = 'smjRawMath';
-ve.ce.SMJRawMathCENode.static.primaryCommandName = 'smjRawMath';
+ve.ce.SMJRawMathNode.static.name = 'smjRawMath';
+ve.ce.SMJRawMathNode.static.primaryCommandName = 'smjRawMath';
 
 // ------------------------------------------------------------
 // レンダリング
@@ -46,7 +46,7 @@ ve.ce.SMJRawMathCENode.static.primaryCommandName = 'smjRawMath';
  *
  * @return {string}
  */
-ve.ce.SMJRawMathCENode.prototype.getRawSource = function () {
+ve.ce.SMJRawMathNode.prototype.getRawSource = function () {
 	var attrs = this.model.getAttributes();
 	return ( attrs.delimOpen || '' ) +
 		( attrs.latex || '' ) +
@@ -57,7 +57,7 @@ ve.ce.SMJRawMathCENode.prototype.getRawSource = function () {
  * MathJaxでレンダリングする。
  *
  */
-ve.ce.SMJRawMathCENode.prototype.update = function () {
+ve.ce.SMJRawMathNode.prototype.update = function () {
 	if ( this._mjRunning ) {
 		// 実行中 → 完了後に再実行するよう予約するだけ
 		this._updatePending = true;
@@ -106,18 +106,18 @@ ve.ce.SMJRawMathCENode.prototype.update = function () {
  * Inspector での編集 → changeAttributes → attributeChange イベント
  * → update() でライブプレビューが実現する。
  */
-ve.ce.SMJRawMathCENode.prototype.onSetup = function () {
-	ve.ce.SMJRawMathCENode.super.prototype.onSetup.call( this );
+ve.ce.SMJRawMathNode.prototype.onSetup = function () {
+	ve.ce.SMJRawMathNode.super.prototype.onSetup.call( this );
 	this.model.connect( this, { attributeChange: 'onAttributeChange' } );
 };
 
-ve.ce.SMJRawMathCENode.prototype.onTeardown = function () {
+ve.ce.SMJRawMathNode.prototype.onTeardown = function () {
 	this._updatePending = false;
 	this.model.disconnect( this );
-	ve.ce.SMJRawMathCENode.super.prototype.onTeardown.call( this );
+	ve.ce.SMJRawMathNode.super.prototype.onTeardown.call( this );
 };
 
-ve.ce.SMJRawMathCENode.prototype.onAttributeChange = function () {
+ve.ce.SMJRawMathNode.prototype.onAttributeChange = function () {
 	this.update();
 };
 
@@ -127,4 +127,4 @@ ve.ce.SMJRawMathCENode.prototype.onAttributeChange = function () {
 // Tag extensionルートと同じ挙動になる。
 // ------------------------------------------------------------
 
-ve.ce.nodeFactory.register( ve.ce.SMJRawMathCENode );
+ve.ce.nodeFactory.register( ve.ce.SMJRawMathNode );

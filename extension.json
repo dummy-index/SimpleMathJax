@@ -64,7 +64,7 @@
 			"scripts": [
 				"resources/ve-smj-raw/ve.smj.RawMathValidator.js",
 				"resources/ve-smj-raw/ve.dm.SMJRawMathNode.js",
-				"resources/ve-smj-raw/ve.ce.SMJRawMathCENode.js",
+				"resources/ve-smj-raw/ve.ce.SMJRawMathNode.js",
 				"resources/ve-smj-raw/ve.ui.SMJRawMathInspector.js",
 				"resources/ve-smj-raw/ve.ui.SMJRawMathTools.js",
 				"resources/ve-smj-raw/ve.init.SMJRawMathSetup.js"
