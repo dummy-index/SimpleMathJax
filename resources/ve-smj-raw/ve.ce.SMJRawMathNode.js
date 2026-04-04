@@ -33,7 +33,7 @@ OO.inheritClass( ve.ce.SMJRawMathNode, ve.ce.LeafNode );
 OO.mixinClass( ve.ce.SMJRawMathNode, ve.ce.FocusableNode );
 
 ve.ce.SMJRawMathNode.static.name = 'smjRawMath';
-ve.ce.SMJRawMathNode.static.primaryCommandName = 'smjRawMath';
+ve.ce.SMJRawMathNode.static.primaryCommandName = 'smjRawMathInspector';
 
 // ------------------------------------------------------------
 // レンダリング
