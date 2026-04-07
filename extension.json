@@ -91,5 +91,15 @@
 	"MessagesDirs": {
 		"SimpleMathJax": ["i18n"]
 	},
+	"QUnitTestModule": {
+		"scripts": [
+			"tests/qunit/ve.smj.RawMathValidator.test.js"
+		],
+		"dependencies": [
+			"ext.SimpleMathJax.visualEditorRaw"
+		],
+		"localBasePath": ".",
+		"remoteExtPath": "SimpleMathJax"
+	},
 	"manifest_version": 2
 }
