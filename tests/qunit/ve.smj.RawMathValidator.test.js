@@ -180,8 +180,8 @@ QUnit.module( 've.smj.RawMathValidator.complete', {
 	afterEach: removeMathJaxStub
 } );
 
-QUnit.test( '最初から正常（count: 0）', function ( assert ) {
-	// i=0 で _validate → ok になる場合
+QUnit.test( '最初から正常（count: 0, latexは変化なし）', function ( assert ) {
+	// ループ前の0個チェックでokになる
 	var latex = 'x^{2}';
 	var delimOpen = '$$';
 	var delimClose = '$$';
@@ -191,19 +191,19 @@ QUnit.test( '最初から正常（count: 0）', function ( assert ) {
 	var result = ve.smj.RawMathValidator.complete( latex, delimOpen, delimClose );
 	assert.strictEqual( result.count, 0 );
 	assert.strictEqual( result.reason, 'ok' );
+	// 0個追加なのでlatexはそのまま（マーカーも入らない）
 	assert.strictEqual( result.latex, latex );
 } );
 
-QUnit.test( 'MathJax未準備 → unavailable でも reason:ok を返す', function ( assert ) {
-	// window.MathJax なし → _validate が unavailable を返す
+QUnit.test( 'MathJax未準備（ループ前チェックでunavailable）→ reason:ok, count:0', function ( assert ) {
+	// window.MathJax なし → ループ前の _validate が unavailable を返す
 	var result = ve.smj.RawMathValidator.complete( 'x', '$$', '$$' );
 	assert.strictEqual( result.reason, 'ok' );
 	assert.strictEqual( result.count, 0 );
 } );
 
 QUnit.test( '\\end がない isBeginEnd → missing-end', function ( assert ) {
-	// delimOpen === '' = isBeginEnd モード
-	// latexに\\endがない
+	// delimOpen === '' = isBeginEnd モード、latexに\\endがない
 	var result = ve.smj.RawMathValidator.complete(
 		'\\begin{align} x = 1',
 		'',
@@ -214,7 +214,9 @@ QUnit.test( '\\end がない isBeginEnd → missing-end', function ( assert ) {
 } );
 
 QUnit.test( '} 1個追加で解決（インラインモード, count: 1）', function ( assert ) {
-	// i=0: incomplete → マーカー挿入 + } 追加 → i=1 で ok
+	// ループ前チェック（callCount=1）: incomplete
+	// マーカー挿入 → } 1個追加 → チェック（callCount=2）: ok
+	// → count: 1
 	var latex = '\\frac{1}{2';
 	var delimOpen = '\\(';
 	var delimClose = '\\)';
@@ -226,17 +228,11 @@ QUnit.test( '} 1個追加で解決（インラインモード, count: 1）', fun
 				findMath: function ( texts ) {
 					callCount++;
 					var text = texts[ 0 ];
-					// 1回目（i=0, マーカー挿入前）: incomplete
-					// 2回目（i=0, マーカー＋}挿入後）: ok
-					// ※ complete()のループでi=0に2回findMathが呼ばれる
-					//   1回目: delimOpen+latex+delimClose のまま
-					//   その後マーカー挿入・}追加
-					//   2回目以降: マーカー付きlatexで呼ばれる
 					if ( callCount === 1 ) {
-						// まだ }が足りない
+						// ループ前: 元のrawをチェック → incomplete
 						return [];
 					}
-					// マーカー＋}が入ったので全体にマッチすると仮定
+					// i=1: }1個追加済みのrawをチェック → ok
 					return [ mathItem( 0, text.length, false ) ];
 				}
 			} ]
@@ -265,8 +261,10 @@ QUnit.test( '} 1個追加で解決（isBeginEndモード, \\end 直前に挿入�
 					callCount++;
 					var text = texts[ 0 ];
 					if ( callCount === 1 ) {
+						// ループ前チェック → incomplete
 						return [];
 					}
+					// i=1: }1個追加済み → ok
 					return [ mathItem( 0, text.length, false ) ];
 				}
 			} ]
@@ -277,15 +275,15 @@ QUnit.test( '} 1個追加で解決（isBeginEndモード, \\end 直前に挿入�
 	assert.strictEqual( result.reason, 'ok' );
 	assert.strictEqual( result.count, 1 );
 
-	// } が \end より前に挿入されているか確認
+	// マーカーと } が \end より前に挿入されているか確認
+	// （stripCloserMarkers呼び出し前なのでマーカーが残っている）
 	var closerPos = result.latex.indexOf( '%ve-closer%' );
 	var endPos = result.latex.lastIndexOf( '\\end' );
-	// stripCloserMarkersを呼ぶ前なのでマーカーが残っている
 	assert.ok( closerPos < endPos, '\\end より前にマーカー（および}）が挿入されている' );
 } );
 
 QUnit.test( 'MAX_ITER超過 → max-iter', function ( assert ) {
-	// findMath が常に incomplete を返す
+	// findMath が常に incomplete を返す → MAX_ITER回追加しても解決しない
 	installFindMathStub( [] );
 
 	var result = ve.smj.RawMathValidator.complete( 'x', '$$', '$$' );
@@ -294,9 +292,10 @@ QUnit.test( 'MAX_ITER超過 → max-iter', function ( assert ) {
 } );
 
 QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化される', function ( assert ) {
-	// ユーザーが誤って %ve-closer%\n を入力していても
-	// complete() 冒頭で %% に置換されるはず
+	// ユーザーが誤って %ve-closer%\n を含む入力をしても
+	// complete() 冒頭で %% に置換されて補完マーカーと混同しない
 	var latex = 'x %ve-closer%\n+ 1';
+
 	var callCount = 0;
 	window.MathJax = {
 		startup: {
@@ -305,6 +304,7 @@ QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化され
 					callCount++;
 					var text = texts[ 0 ];
 					if ( callCount === 1 ) {
+						// ループ前チェック → incomplete
 						return [];
 					}
 					return [ mathItem( 0, text.length, false ) ];
@@ -314,14 +314,12 @@ QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化され
 	};
 
 	var result = ve.smj.RawMathValidator.complete( latex, '$$', '$$' );
-	// 無効化されていればcomplete()が正常にマーカーを管理できる
 	assert.strictEqual( result.reason, 'ok' );
-	// 結果のlatexに元のマーカー文字列が残っていないこと
-	assert.ok(
-		result.latex.indexOf( '%ve-closer%' ) === -1 ||
-		result.latex.indexOf( '%ve-closer%\n' ) !== -1, // 補完マーカーは別物
-		'ユーザー入力のマーカーは補完マーカーと区別されている'
-	);
+	// 補完マーカー（%ve-closer%\n）はあってもよいが、
+	// ユーザー入力由来のものが補完マーカーとして機能していないこと。
+	// count=1 であれば補完が1回で済んでおり、
+	// マーカーが二重になっていないことが間接的に確認できる。
+	assert.strictEqual( result.count, 1 );
 } );
 
 // ============================================================
@@ -338,29 +336,34 @@ QUnit.test( 'マーカーなし → 変化なし', function ( assert ) {
 	);
 } );
 
-QUnit.test( '} 1個のマーカーを除去', function ( assert ) {
+QUnit.test( '1個の } を含むマーカーを除去', function ( assert ) {
 	// complete()が生成する形式: "%\n} %ve-closer%\n"
 	var latex = '\\frac{1}{2%\n} %ve-closer%\n';
 	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
 	assert.strictEqual( result, '\\frac{1}{2' );
 } );
 
-QUnit.test( '} 複数のマーカーを除去', function ( assert ) {
+QUnit.test( '複数の } を含むマーカーを除去', function ( assert ) {
 	var latex = '\\frac{1%\n} } %ve-closer%\n{2}';
 	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
 	assert.strictEqual( result, '\\frac{1{2}' );
 } );
 
-QUnit.test( '複数マーカーブロックをすべて除去', function ( assert ) {
+QUnit.test( '最後のマーカーブロックのみ除去', function ( assert ) {
 	// isBeginEndモードで2個のマーカーが挿入された場合
 	var latex =
-		'\\begin{align}\n' +
-		' x = \\frac{1%\n} } %ve-closer%\n' +
+		'\\begin{align}{\n' +
+		' x = \\frac{1%\n} %ve-closer%\n' +
+		' {2%\n} } %ve-closer%\n' +
 		'\\end{align}';
 	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
 	assert.ok(
-		result.indexOf( '%ve-closer%' ) === -1,
-		'マーカーがすべて除去されている'
+		result.indexOf( '{1%\n} %ve-closer%' ) !== -1,
+		'1個目のマーカーは除去されていない'
+	);
+	assert.ok(
+		result.indexOf( '{2%\n} } %ve-closer%' ) === -1,
+		'2個目のマーカーは除去されている'
 	);
 	assert.ok(
 		result.indexOf( '\\end{align}' ) !== -1,

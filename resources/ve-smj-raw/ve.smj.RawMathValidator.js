@@ -66,8 +66,7 @@ ve.smj.RawMathValidator = {
 	// 補完
 	//
 	// } を1個ずつ追加して validate が 'ok' になるまでループする。
-	// %コメント後の波括弧はFindTeXが区別しないことを利用して
-	// コメント行として挿入する（捏造ではない）。
+	// 追加する波括弧はマーカーで挟む。
 	//
 	// \begin...\end の場合は \end の直前に挿入。
 	// それ以外は latex の末尾に追加。
@@ -92,33 +91,42 @@ ve.smj.RawMathValidator = {
 			}
 		}
 
-		for ( var i = 0; i < MAX_ITER; i++ ) {
-			var raw = delimOpen + current + delimClose;
-			var result = this._validate( raw );
+		// 0個追加の状態でまず検証する
+		var result = this._validate( delimOpen + current + delimClose );
+		if ( result === 'ok' ) {
+			return { latex: current, count: 0, reason: 'ok' };
+		}
+		if ( result === 'unavailable' ) {
+			// MathJax未準備 → 補完できないが失敗でもない
+			return { latex: current, count: 0, reason: 'ok' };
+		}
+
+		// } の挿入位置をマーカーで固定する（ループを通じて1回だけ）
+		if ( isBeginEnd ) {
+			var markerPos = current.lastIndexOf( '\\end' );
+			current = current.slice( 0, markerPos ) +
+					'%\n%ve-closer%\n' +
+					current.slice( markerPos );
+		} else {
+			current = current + '%\n%ve-closer%\n';
+		}
+
+		// i = 追加した } の個数
+		for ( var i = 1; i <= MAX_ITER; i++ ) {
+			// } を1個挿入してから検証
+			var closerPos = current.lastIndexOf( '%ve-closer%\n' );
+			current = current.slice( 0, closerPos ) +
+					'} ' +
+					current.slice( closerPos );
+
+			result = this._validate( delimOpen + current + delimClose );
 
 			if ( result === 'ok' ) {
 				return { latex: current, count: i, reason: 'ok' };
 			}
 			if ( result === 'unavailable' ) {
-				// MathJax未準備 → 補完できないが失敗でもない
-				return { latex: current, count: 0, reason: 'ok' };
+				return { latex: current, count: i, reason: 'ok' };
 			}
-
-			if ( i === 0 ) {
-				if ( isBeginEnd ) {
-					const endPos = current.lastIndexOf( '\\end' );
-					current = current.slice( 0, endPos ) +
-							'%\n%ve-closer%\n' +
-							current.slice( endPos );
-				} else {
-					current = current + '%\n%ve-closer%\n';
-				}
-			}
-			// } を1個挿入
-			const endPos = current.lastIndexOf( '%ve-closer%\n' );
-			current = current.slice( 0, endPos ) +
-					'} ' +
-					current.slice( endPos );
 		}
 
 		// MAX_ITER 回試みて解決しなかった → 何か別の問題
@@ -128,5 +136,5 @@ ve.smj.RawMathValidator = {
 
 // マーカーとその中の } を取り除くヘルパー
 ve.smj.RawMathValidator.stripCloserMarkers = function ( latex ) {
-	return latex.replace( /\%\n[} ]+\%ve-closer\%\n/g, '' );
+	return latex.replace( /([\s\S]*)\%\n[} ]+\%ve-closer\%\n/, '$1' )
 };
