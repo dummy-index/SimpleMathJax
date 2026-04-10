@@ -82,7 +82,7 @@ ve.smj.RawMathValidator = {
 		var MAX_ITER = 20;
 		var isBeginEnd = ( delimOpen === '' );
 		// ユーザー入力がマーカーを含んでいると誤動作するため無効化
-		var current = latex.replace( /\%ve-closer\%\n/g, '%%\n' );
+		var current = latex.replace( /%ve-closer%\n/g, '%%\n' );
 
 		if ( isBeginEnd ) {
 			current = current.trim();
@@ -135,6 +135,10 @@ ve.smj.RawMathValidator = {
 };
 
 // マーカーとその中の } を取り除くヘルパー
-ve.smj.RawMathValidator.stripCloserMarkers = function ( latex ) {
-	return latex.replace( /([\s\S]*)\%\n[} ]+\%ve-closer\%\n/, '$1' )
+ve.smj.RawMathValidator.stripCloserMarker = function ( latex, delimOpen = '' ) {
+	var isBeginEnd = ( delimOpen === '' );
+	if ( isBeginEnd ) {
+		return latex.replace( /([\s\S]*)%\n[} ]+%ve-closer%\n(|\\end\s*{[^}]*})$/, '$1$2' );
+	}
+	return latex.replace( /%\n[} ]+%ve-closer%\n$/, '' );
 };

@@ -137,7 +137,7 @@ ve.ui.SMJRawMathInspector.prototype.getSetupProcess = function ( data ) {
 			}
 
 			this.latexInput.setValue(
-				ve.smj.RawMathValidator.stripCloserMarkers( attrs.latex || '' )
+				ve.smj.RawMathValidator.stripCloserMarker( attrs.latex || '', attrs.delimOpen || '' )
 			);
 			this.delimSelect.setValue(
 				this.delimPairToKey(

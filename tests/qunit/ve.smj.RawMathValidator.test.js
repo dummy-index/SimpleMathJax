@@ -276,7 +276,7 @@ QUnit.test( '} 1個追加で解決（isBeginEndモード, \\end 直前に挿入�
 	assert.strictEqual( result.count, 1 );
 
 	// マーカーと } が \end より前に挿入されているか確認
-	// （stripCloserMarkers呼び出し前なのでマーカーが残っている）
+	// （stripCloserMarker呼び出し前なのでマーカーが残っている）
 	var closerPos = result.latex.indexOf( '%ve-closer%' );
 	var endPos = result.latex.lastIndexOf( '\\end' );
 	assert.ok( closerPos < endPos, '\\end より前にマーカー（および}）が挿入されている' );
@@ -323,15 +323,15 @@ QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化され
 } );
 
 // ============================================================
-// stripCloserMarkers()
+// stripCloserMarker()
 // ============================================================
 
-QUnit.module( 've.smj.RawMathValidator.stripCloserMarkers' );
+QUnit.module( 've.smj.RawMathValidator.stripCloserMarker' );
 
 QUnit.test( 'マーカーなし → 変化なし', function ( assert ) {
 	var latex = 'x^{2} + y^{2}';
 	assert.strictEqual(
-		ve.smj.RawMathValidator.stripCloserMarkers( latex ),
+		ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' ),
 		latex
 	);
 } );
@@ -339,13 +339,13 @@ QUnit.test( 'マーカーなし → 変化なし', function ( assert ) {
 QUnit.test( '1個の } を含むマーカーを除去', function ( assert ) {
 	// complete()が生成する形式: "%\n} %ve-closer%\n"
 	var latex = '\\frac{1}{2%\n} %ve-closer%\n';
-	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' );
 	assert.strictEqual( result, '\\frac{1}{2' );
 } );
 
 QUnit.test( '複数の } を含むマーカーを除去', function ( assert ) {
-	var latex = '\\frac{1%\n} } %ve-closer%\n{2}';
-	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
+	var latex = '\\frac{1{2}%\n} } %ve-closer%\n';
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' );
 	assert.strictEqual( result, '\\frac{1{2}' );
 } );
 
@@ -353,16 +353,16 @@ QUnit.test( '最後のマーカーブロックのみ除去', function ( assert )
 	// isBeginEndモードで2個のマーカーが挿入された場合
 	var latex =
 		'\\begin{align}{\n' +
-		' x = \\frac{1%\n} %ve-closer%\n' +
-		' {2%\n} } %ve-closer%\n' +
+		' x = \\frac{1}{2%\n} %ve-closer%\n' +
+		'%\n} } %ve-closer%\n' +
 		'\\end{align}';
-	var result = ve.smj.RawMathValidator.stripCloserMarkers( latex );
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex );
 	assert.ok(
-		result.indexOf( '{1%\n} %ve-closer%' ) !== -1,
+		result.indexOf( '%\n} %ve-closer%' ) !== -1,
 		'1個目のマーカーは除去されていない'
 	);
 	assert.ok(
-		result.indexOf( '{2%\n} } %ve-closer%' ) === -1,
+		result.indexOf( '%\n} } %ve-closer%' ) === -1,
 		'2個目のマーカーは除去されている'
 	);
 	assert.ok(
@@ -373,7 +373,7 @@ QUnit.test( '最後のマーカーブロックのみ除去', function ( assert )
 
 QUnit.test( '空文字列 → 空文字列', function ( assert ) {
 	assert.strictEqual(
-		ve.smj.RawMathValidator.stripCloserMarkers( '' ),
+		ve.smj.RawMathValidator.stripCloserMarker( '' ),
 		''
 	);
 } );
