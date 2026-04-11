@@ -80,8 +80,7 @@
 				"smj-ve-rawmath-error-unrecoverable"
 			],
 			"dependencies": [
-				"ext.visualEditor.mwcore",
-				"ext.SimpleMathJax"
+				"ext.visualEditor.mwcore"
 			]
 		}
 	},
