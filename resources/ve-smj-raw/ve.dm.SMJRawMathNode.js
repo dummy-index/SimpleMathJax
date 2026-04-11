@@ -16,6 +16,7 @@ ve.dm.SMJRawMathNode.static.matchFunction = function ( domElement ) {
 
 ve.dm.SMJRawMathNode.static.toDataElement = function ( domElements ) {
 	var el = domElements[ 0 ];
+	// || '' はここに集約。以降は fromAttrs 経由で Delim オブジェクトを使う。
 	return {
 		type: 'smjRawMath',
 		attributes: {
@@ -27,29 +28,22 @@ ve.dm.SMJRawMathNode.static.toDataElement = function ( domElements ) {
 };
 
 ve.dm.SMJRawMathNode.static.toDomElements = function ( dataElement, doc, converter ) {
-	var latex = dataElement.attributes.latex;
-	var delimOpen = dataElement.attributes.delimOpen;
-	var delimClose = dataElement.attributes.delimClose;
-	var raw = delimOpen + latex + delimClose;
+	var attrs = dataElement.attributes;
+	var delim = ve.smj.Delim.fromAttrs( attrs );
+	var raw = ve.smj.Delim.buildRaw( delim, attrs.latex );
 
 	if ( converter.isForParser() ) {
 		// 保存時：生テキストとしてParsoidに渡す
-		// wikitextにする際はtrimが必要
-		// ただしdelimOpenの先頭がスペースな場合など（つまりMathJaxが
-		// そう設定されていてそう切り出してきた）はそれをそのまま返さ
-		// ないといけない
-		if ( delimOpen === '' ) {
-			raw = raw.trim();
-		}
+		// buildRaw が beginEnd の場合に trim 済みなのでそのまま返す
 		return [ doc.createTextNode( raw ) ];
 	}
 
 	// CLIPBOARD / PREVIEW：spanで情報を保持
 	var span = doc.createElement( 'span' );
 	span.setAttribute( 'typeof', 'mw:SMJRawMath' );
-	span.setAttribute( 'data-smj-latex', latex );
-	span.setAttribute( 'data-smj-delim-open', delimOpen );
-	span.setAttribute( 'data-smj-delim-close', delimClose );
+	span.setAttribute( 'data-smj-latex', attrs.latex );
+	span.setAttribute( 'data-smj-delim-open', ve.smj.Delim.toAttrs( delim ).delimOpen );
+	span.setAttribute( 'data-smj-delim-close', ve.smj.Delim.toAttrs( delim ).delimClose );
 	span.textContent = raw;
 	return [ span ];
 };

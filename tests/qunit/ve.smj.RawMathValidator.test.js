@@ -41,7 +41,7 @@ function removeMathJaxStub() {
  *
  * FindTeX の実際の返値形式:
  *   { math, start: { n }, end: { n }, open, close, display }
- * display は boolean（null は「デリミタを認識できなかった」扱い）。
+ * display は boolean（null は '$' のエスケープ等。ve-smj-rawでは扱わない）。
  *
  * @param {number} startN  マッチ開始オフセット
  * @param {number} endN    マッチ終了オフセット（末尾の次）
@@ -59,8 +59,68 @@ function mathItem( startN, endN, display ) {
 	};
 }
 
+// よく使う Delim オブジェクト
+var DELIM_DOLLAR = ve.smj.Delim.delim( '$$', '$$' );
+var DELIM_PAREN = ve.smj.Delim.delim( '\\(', '\\)' );
+var DELIM_BEGIN = ve.smj.Delim.beginEnd();
+
 // ============================================================
-// validate() / _validate()
+// ve.smj.Delim
+// ============================================================
+
+QUnit.module( 've.smj.Delim' );
+
+QUnit.test( 'fromAttrs: 空文字列 → beginEnd', function ( assert ) {
+	var d = ve.smj.Delim.fromAttrs( { delimOpen: '', delimClose: '' } );
+	assert.strictEqual( d.type, 'beginEnd' );
+} );
+
+QUnit.test( 'fromAttrs: 属性なし → beginEnd', function ( assert ) {
+	var d = ve.smj.Delim.fromAttrs( {} );
+	assert.strictEqual( d.type, 'beginEnd' );
+} );
+
+QUnit.test( 'fromAttrs: $$ → delim', function ( assert ) {
+	var d = ve.smj.Delim.fromAttrs( { delimOpen: '$$', delimClose: '$$' } );
+	assert.strictEqual( d.type, 'delim' );
+	assert.strictEqual( d.open, '$$' );
+	assert.strictEqual( d.close, '$$' );
+} );
+
+QUnit.test( 'toAttrs / fromAttrs ラウンドトリップ', function ( assert ) {
+	[ DELIM_DOLLAR, DELIM_PAREN, DELIM_BEGIN ].forEach( function ( d ) {
+		var attrs = ve.smj.Delim.toAttrs( d );
+		var d2 = ve.smj.Delim.fromAttrs( attrs );
+		assert.strictEqual( d2.type, d.type, 'type が一致: ' + d.type );
+	} );
+} );
+
+QUnit.test( 'fromKey / toKey ラウンドトリップ', function ( assert ) {
+	[ 'begin-end', 'dollar-block', 'paren', 'bracket' ].forEach( function ( key ) {
+		assert.strictEqual(
+			ve.smj.Delim.toKey( ve.smj.Delim.fromKey( key ) ),
+			key,
+			key
+		);
+	} );
+} );
+
+QUnit.test( 'buildRaw: delim は open+latex+close', function ( assert ) {
+	assert.strictEqual(
+		ve.smj.Delim.buildRaw( DELIM_DOLLAR, 'x^2' ),
+		'$$x^2$$'
+	);
+} );
+
+QUnit.test( 'buildRaw: beginEnd は trim のみ', function ( assert ) {
+	assert.strictEqual(
+		ve.smj.Delim.buildRaw( DELIM_BEGIN, '  \\begin{align}x\\end{align}  ' ),
+		'\\begin{align}x\\end{align}'
+	);
+} );
+
+// ============================================================
+// ve.smj.RawMathValidator.validate()
 // ============================================================
 
 QUnit.module( 've.smj.RawMathValidator.validate', {
@@ -70,7 +130,7 @@ QUnit.module( 've.smj.RawMathValidator.validate', {
 QUnit.test( 'MathJax未ロード → unavailable', function ( assert ) {
 	// window.MathJax を定義しない
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( '$$x^2$$' ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'unavailable'
 	);
 } );
@@ -78,15 +138,15 @@ QUnit.test( 'MathJax未ロード → unavailable', function ( assert ) {
 QUnit.test( 'MathJax.startup.input が空 → unavailable', function ( assert ) {
 	window.MathJax = { startup: { input: [] } };
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( '$$x^2$$' ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'unavailable'
 	);
 } );
 
 QUnit.test( 'findMath が例外を投げる → unavailable', function ( assert ) {
-	installFindMathStub( null ); // null = 例外モード
+	installFindMathStub( null );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( '$$x^2$$' ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'unavailable'
 	);
 } );
@@ -94,28 +154,27 @@ QUnit.test( 'findMath が例外を投げる → unavailable', function ( assert 
 QUnit.test( 'findMath が空配列 → incomplete', function ( assert ) {
 	installFindMathStub( [] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( '$$x^2$$' ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'incomplete'
 	);
 } );
 
 QUnit.test( '正常: 全体が1アイテムにマッチ → ok', function ( assert ) {
 	var raw = '$$x^2$$';
-	installFindMathStub( [ mathItem( 0, raw.trim().length, false ) ] );
+	installFindMathStub( [ mathItem( 0, raw.length, false ) ] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'ok'
 	);
 } );
 
-QUnit.test( 'validate は trim してから _validate を呼ぶ（前後空白）', function ( assert ) {
-	// "  $$x^2$$  " → trim → "$$x^2$$"（length=7）で ok
-	var trimmed = '$$x^2$$';
+QUnit.test( 'beginEnd: trim後の長さで判定される', function ( assert ) {
+	// buildRaw が trim するので "  \begin{x}\end{x}  " → "\begin{x}\end{x}"
+	var trimmed = '\\begin{x}\\end{x}';
 	installFindMathStub( [ mathItem( 0, trimmed.length, false ) ] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( '  $$x^2$$  ' ),
-		'ok',
-		'前後の空白はtrimされてokになる'
+		ve.smj.RawMathValidator.validate( '  \\begin{x}\\end{x}  ', DELIM_BEGIN ),
+		'ok'
 	);
 } );
 
@@ -123,7 +182,7 @@ QUnit.test( 'マッチ開始位置が0でない → incomplete', function ( asse
 	var raw = '$$x^2$$';
 	installFindMathStub( [ mathItem( 2, raw.length, false ) ] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'incomplete'
 	);
 } );
@@ -132,7 +191,7 @@ QUnit.test( 'マッチ終了位置が末尾に届かない → incomplete', func
 	var raw = '$$x^2$$';
 	installFindMathStub( [ mathItem( 0, raw.length - 2, false ) ] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'incomplete'
 	);
 } );
@@ -141,7 +200,7 @@ QUnit.test( 'first.display === null → incomplete', function ( assert ) {
 	var raw = '$$x^2$$';
 	installFindMathStub( [ mathItem( 0, raw.length, null ) ] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'x^2', DELIM_DOLLAR ),
 		'incomplete'
 	);
 } );
@@ -154,7 +213,7 @@ QUnit.test( 'last.display === null → incomplete（複数アイテム）', func
 		{ math: 'b', start: { n: 5 }, end: { n: raw.length }, open: '$$', close: '$$', display: null }
 	] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'a$$$$b', DELIM_DOLLAR ),
 		'incomplete'
 	);
 } );
@@ -167,13 +226,13 @@ QUnit.test( '複数アイテムが全体を覆う → ok', function ( assert ) {
 		{ math: 'b', start: { n: 5 }, end: { n: raw.length }, open: '$$', close: '$$', display: false }
 	] );
 	assert.strictEqual(
-		ve.smj.RawMathValidator.validate( raw ),
+		ve.smj.RawMathValidator.validate( 'a$$$$b', DELIM_DOLLAR ),
 		'ok'
 	);
 } );
 
 // ============================================================
-// complete()
+// ve.smj.RawMathValidator.complete()
 // ============================================================
 
 QUnit.module( 've.smj.RawMathValidator.complete', {
@@ -183,12 +242,10 @@ QUnit.module( 've.smj.RawMathValidator.complete', {
 QUnit.test( '最初から正常（count: 0, latexは変化なし）', function ( assert ) {
 	// ループ前の0個チェックでokになる
 	var latex = 'x^{2}';
-	var delimOpen = '$$';
-	var delimClose = '$$';
-	var raw = delimOpen + latex + delimClose;
+	var raw = ve.smj.Delim.buildRaw( DELIM_DOLLAR, latex );
 	installFindMathStub( [ mathItem( 0, raw.length, false ) ] );
 
-	var result = ve.smj.RawMathValidator.complete( latex, delimOpen, delimClose );
+	var result = ve.smj.RawMathValidator.complete( latex, DELIM_DOLLAR );
 	assert.strictEqual( result.count, 0 );
 	assert.strictEqual( result.reason, 'ok' );
 	// 0個追加なのでlatexはそのまま（マーカーも入らない）
@@ -197,30 +254,24 @@ QUnit.test( '最初から正常（count: 0, latexは変化なし）', function (
 
 QUnit.test( 'MathJax未準備（ループ前チェックでunavailable）→ reason:ok, count:0', function ( assert ) {
 	// window.MathJax なし → ループ前の _validate が unavailable を返す
-	var result = ve.smj.RawMathValidator.complete( 'x', '$$', '$$' );
+	var result = ve.smj.RawMathValidator.complete( 'x', DELIM_DOLLAR );
 	assert.strictEqual( result.reason, 'ok' );
 	assert.strictEqual( result.count, 0 );
 } );
 
 QUnit.test( '\\end がない isBeginEnd → missing-end', function ( assert ) {
-	// delimOpen === '' = isBeginEnd モード、latexに\\endがない
 	var result = ve.smj.RawMathValidator.complete(
 		'\\begin{align} x = 1',
-		'',
-		''
+		DELIM_BEGIN
 	);
 	assert.strictEqual( result.latex, null );
 	assert.strictEqual( result.reason, 'missing-end' );
 } );
 
-QUnit.test( '} 1個追加で解決（インラインモード, count: 1）', function ( assert ) {
+QUnit.test( '} 1個追加で解決（delimモード, count: 1）', function ( assert ) {
 	// ループ前チェック（callCount=1）: incomplete
 	// マーカー挿入 → } 1個追加 → チェック（callCount=2）: ok
 	// → count: 1
-	var latex = '\\frac{1}{2';
-	var delimOpen = '\\(';
-	var delimClose = '\\)';
-
 	var callCount = 0;
 	window.MathJax = {
 		startup: {
@@ -229,17 +280,15 @@ QUnit.test( '} 1個追加で解決（インラインモード, count: 1）', fun
 					callCount++;
 					var text = texts[ 0 ];
 					if ( callCount === 1 ) {
-						// ループ前: 元のrawをチェック → incomplete
 						return [];
 					}
-					// i=1: }1個追加済みのrawをチェック → ok
 					return [ mathItem( 0, text.length, false ) ];
 				}
 			} ]
 		}
 	};
 
-	var result = ve.smj.RawMathValidator.complete( latex, delimOpen, delimClose );
+	var result = ve.smj.RawMathValidator.complete( '\\frac{1}{2', DELIM_PAREN );
 	assert.strictEqual( result.reason, 'ok' );
 	assert.strictEqual( result.count, 1 );
 	assert.ok(
@@ -249,10 +298,6 @@ QUnit.test( '} 1個追加で解決（インラインモード, count: 1）', fun
 } );
 
 QUnit.test( '} 1個追加で解決（isBeginEndモード, \\end 直前に挿入）', function ( assert ) {
-	var latex = '\\begin{align}\n x = \\frac{1}{2\n\\end{align}';
-	var delimOpen = '';
-	var delimClose = '';
-
 	var callCount = 0;
 	window.MathJax = {
 		startup: {
@@ -261,41 +306,34 @@ QUnit.test( '} 1個追加で解決（isBeginEndモード, \\end 直前に挿入�
 					callCount++;
 					var text = texts[ 0 ];
 					if ( callCount === 1 ) {
-						// ループ前チェック → incomplete
 						return [];
 					}
-					// i=1: }1個追加済み → ok
 					return [ mathItem( 0, text.length, false ) ];
 				}
 			} ]
 		}
 	};
 
-	var result = ve.smj.RawMathValidator.complete( latex, delimOpen, delimClose );
+	var result = ve.smj.RawMathValidator.complete(
+		'\\begin{align}\n x = \\frac{1}{2\n\\end{align}',
+		DELIM_BEGIN
+	);
 	assert.strictEqual( result.reason, 'ok' );
 	assert.strictEqual( result.count, 1 );
 
-	// マーカーと } が \end より前に挿入されているか確認
-	// （stripCloserMarker呼び出し前なのでマーカーが残っている）
 	var closerPos = result.latex.indexOf( '%ve-closer%' );
 	var endPos = result.latex.lastIndexOf( '\\end' );
 	assert.ok( closerPos < endPos, '\\end より前にマーカー（および}）が挿入されている' );
 } );
 
 QUnit.test( 'MAX_ITER超過 → max-iter', function ( assert ) {
-	// findMath が常に incomplete を返す → MAX_ITER回追加しても解決しない
 	installFindMathStub( [] );
-
-	var result = ve.smj.RawMathValidator.complete( 'x', '$$', '$$' );
+	var result = ve.smj.RawMathValidator.complete( 'x', DELIM_DOLLAR );
 	assert.strictEqual( result.latex, null );
 	assert.strictEqual( result.reason, 'max-iter' );
 } );
 
 QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化される', function ( assert ) {
-	// ユーザーが誤って %ve-closer%\n を含む入力をしても
-	// complete() 冒頭で %% に置換されて補完マーカーと混同しない
-	var latex = 'x %ve-closer%\n+ 1';
-
 	var callCount = 0;
 	window.MathJax = {
 		startup: {
@@ -304,7 +342,6 @@ QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化され
 					callCount++;
 					var text = texts[ 0 ];
 					if ( callCount === 1 ) {
-						// ループ前チェック → incomplete
 						return [];
 					}
 					return [ mathItem( 0, text.length, false ) ];
@@ -313,50 +350,67 @@ QUnit.test( 'ユーザー入力中の %ve-closer% マーカーは無効化され
 		}
 	};
 
-	var result = ve.smj.RawMathValidator.complete( latex, '$$', '$$' );
+	var result = ve.smj.RawMathValidator.complete( 'x %ve-closer%\n+ 1', DELIM_DOLLAR );
 	assert.strictEqual( result.reason, 'ok' );
-	// 補完マーカー（%ve-closer%\n）はあってもよいが、
-	// ユーザー入力由来のものが補完マーカーとして機能していないこと。
-	// count=1 であれば補完が1回で済んでおり、
-	// マーカーが二重になっていないことが間接的に確認できる。
-	assert.strictEqual( result.count, 1 );
+	// 無効化されていれば %ve-closer%\n の直前に } が1個だけあるはず
+	// （ユーザー入力分が %% に置換されているので補完マーカーは1箇所だけ）
+	var markerCount = ( result.latex.match( /%ve-closer%\n/g ) || [] ).length;
+	assert.strictEqual( markerCount, 1, '補完マーカーは1箇所だけ（ユーザー入力分は無効化済み）' );
 } );
 
 // ============================================================
-// stripCloserMarker()
+// ve.smj.RawMathValidator.stripCloserMarker()
 // ============================================================
 
 QUnit.module( 've.smj.RawMathValidator.stripCloserMarker' );
 
-QUnit.test( 'マーカーなし → 変化なし', function ( assert ) {
+QUnit.test( 'マーカーなし → 変化なし（delimモード）', function ( assert ) {
 	var latex = 'x^{2} + y^{2}';
 	assert.strictEqual(
-		ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' ),
+		ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_DOLLAR ),
 		latex
 	);
 } );
 
-QUnit.test( '1個の } を含むマーカーを除去', function ( assert ) {
-	// complete()が生成する形式: "%\n} %ve-closer%\n"
+QUnit.test( '1個の } を含むマーカーを除去（delimモード）', function ( assert ) {
+	// complete()が生成する形式: latex + "%\n} %ve-closer%\n"
 	var latex = '\\frac{1}{2%\n} %ve-closer%\n';
-	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' );
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_DOLLAR );
 	assert.strictEqual( result, '\\frac{1}{2' );
 } );
 
-QUnit.test( '複数の } を含むマーカーを除去', function ( assert ) {
+QUnit.test( '複数の } を含むマーカーを除去（delimモード）', function ( assert ) {
 	var latex = '\\frac{1{2}%\n} } %ve-closer%\n';
 	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, '$$', '$$' );
 	assert.strictEqual( result, '\\frac{1{2}' );
 } );
 
-QUnit.test( '最後のマーカーブロックのみ除去', function ( assert ) {
+QUnit.test( '末尾以外のマーカーは除去しない（delimモード）', function ( assert ) {
+	// 末尾でないマーカーはユーザー入力由来とみなして残す
+	var latex = 'x%\n} %ve-closer%\n+ y%\n} %ve-closer%\n';
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_DOLLAR );
+	// 末尾の1個だけ除去される
+	assert.strictEqual( result, 'x%\n} %ve-closer%\n+ y' );
+} );
+
+QUnit.test( '\\end 直前のマーカーを除去（beginEndモード）', function ( assert ) {
+	var latex =
+		'\\begin{align}\n' +
+		' x = \\frac{1}{2%\n} %ve-closer%\n' +
+		'\\end{align}';
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_BEGIN );
+	assert.ok( result.indexOf( '%ve-closer%' ) === -1, 'マーカーが除去されている' );
+	assert.ok( result.indexOf( '\\end{align}' ) !== -1, '\\end{align}は残っている' );
+} );
+
+QUnit.test( '最後のマーカーのみ除去（beginEndモード、マーカー2個）', function ( assert ) {
 	// isBeginEndモードで2個のマーカーが挿入された場合
 	var latex =
 		'\\begin{align}{\n' +
 		' x = \\frac{1}{2%\n} %ve-closer%\n' +
 		'%\n} } %ve-closer%\n' +
 		'\\end{align}';
-	var result = ve.smj.RawMathValidator.stripCloserMarker( latex );
+	var result = ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_BEGIN );
 	assert.ok(
 		result.indexOf( '%\n} %ve-closer%' ) !== -1,
 		'1個目のマーカーは除去されていない'
@@ -371,9 +425,17 @@ QUnit.test( '最後のマーカーブロックのみ除去', function ( assert )
 	);
 } );
 
+QUnit.test( 'マーカーなし → 変化なし（beginEndモード）', function ( assert ) {
+	var latex = '\\begin{align} x \\end{align}';
+	assert.strictEqual(
+		ve.smj.RawMathValidator.stripCloserMarker( latex, DELIM_BEGIN ),
+		latex
+	);
+} );
+
 QUnit.test( '空文字列 → 空文字列', function ( assert ) {
 	assert.strictEqual(
-		ve.smj.RawMathValidator.stripCloserMarker( '' ),
+		ve.smj.RawMathValidator.stripCloserMarker( '', DELIM_DOLLAR ),
 		''
 	);
 } );

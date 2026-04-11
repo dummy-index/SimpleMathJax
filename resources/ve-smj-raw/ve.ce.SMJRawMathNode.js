@@ -3,11 +3,6 @@
 /**
  * ContentEditable node for SMJRawMath (direct MathJax route).
  *
- * Tag extensionルートの ve.ce.SMJMathNode との差分：
- * - 継承元が LeafNode + FocusableNode（AlienInlineCENode ではない）
- * - LaTeX ソースを delimOpen/latex/delimClose 属性から組み立てる
- * - それ以外のレンダリングロジックは共通化候補
- *
  * @param model
  * @param config
  */
@@ -40,22 +35,17 @@ ve.ce.SMJRawMathNode.static.primaryCommandName = 'smjRawMathInspector';
 // ------------------------------------------------------------
 
 /**
- * DM属性からLaTeXソース文字列を組み立てる。
- * Tag extensionルートは mw:ExtensionTag の body.extsrc を使うが、
- * こちらは delimOpen + latex + delimClose の3属性から再構築する。
+ * DM属性から rawSource 文字列を組み立てる。
  *
  * @return {string}
  */
 ve.ce.SMJRawMathNode.prototype.getRawSource = function () {
 	var attrs = this.model.getAttributes();
-	return ( attrs.delimOpen || '' ) +
-		( attrs.latex || '' ) +
-		( attrs.delimClose || '' );
+	return ve.smj.Delim.buildRaw( ve.smj.Delim.fromAttrs( attrs ), attrs.latex );
 };
 
 /**
  * MathJaxでレンダリングする。
- *
  */
 ve.ce.SMJRawMathNode.prototype.update = function () {
 	if ( this._mjRunning ) {
@@ -120,11 +110,5 @@ ve.ce.SMJRawMathNode.prototype.onTeardown = function () {
 ve.ce.SMJRawMathNode.prototype.onAttributeChange = function () {
 	this.update();
 };
-
-// ------------------------------------------------------------
-// フォーカス時の見た目
-// FocusableNode が提供するハイライト枠をそのまま利用する。
-// Tag extensionルートと同じ挙動になる。
-// ------------------------------------------------------------
 
 ve.ce.nodeFactory.register( ve.ce.SMJRawMathNode );

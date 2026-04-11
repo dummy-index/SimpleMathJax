@@ -18,17 +18,16 @@ ve.smj.RawMathValidator = {
 	// ----------------------------------------------------------------
 	// 検証
 	//
-	// rawSource を trim 後 findMath にかけて、MathItemの開始位置が 0 かつ
-	// 終了位置が rawSource.length に一致するかを確認する。
+	// delim と latex から rawSource を組み立てて findMath にかける。
+	// MathItem の開始位置が 0 かつ終了位置が rawSource.length に
+	// 一致するかを確認する。
 	//
-	// @param  {string} rawSource  delimOpen + latex + delimClose
+	// @param  {string} latex
+	// @param  {Object} delim  ve.smj.Delim オブジェクト
 	// @return {string}  'ok' | 'incomplete' | 'unavailable'
 	// ----------------------------------------------------------------
-	validate: function ( rawSource ) {
-		// FIXME: delimOpenの先頭がスペースな場合など（つまりMathJaxが
-		// そう設定されていてそう切り出してきた）はそれをそのまま処理
-		// しないといけない
-		return this._validate( rawSource.trim() );
+	validate: function ( latex, delim ) {
+		return this._validate( ve.smj.Delim.buildRaw( delim, latex ) );
 	},
 
 	_validate: function ( rawSource ) {
@@ -68,19 +67,18 @@ ve.smj.RawMathValidator = {
 	// } を1個ずつ追加して validate が 'ok' になるまでループする。
 	// 追加する波括弧はマーカーで挟む。
 	//
-	// \begin...\end の場合は \end の直前に挿入。
+	// beginEnd の場合は \end の直前に挿入。
 	// それ以外は latex の末尾に追加。
 	//
 	// @param  {string} latex
-	// @param  {string} delimOpen
-	// @param  {string} delimClose
+	// @param  {Object} delim  ve.smj.Delim オブジェクト
 	// @return {{ latex: string, count: number, reason: string }|{ latex: null, reason: string }}
 	//         補完成功時は補完後のlatexと挿入した}の個数
 	//         補完不能（\end消失等）の場合は null
 	// ----------------------------------------------------------------
-	complete: function ( latex, delimOpen, delimClose ) {
+	complete: function ( latex, delim ) {
 		var MAX_ITER = 20;
-		var isBeginEnd = ( delimOpen === '' );
+		var isBeginEnd = ( delim.type === 'beginEnd' );
 		// ユーザー入力がマーカーを含んでいると誤動作するため無効化
 		var current = latex.replace( /%ve-closer%\n/g, '%%\n' );
 
@@ -92,7 +90,7 @@ ve.smj.RawMathValidator = {
 		}
 
 		// 0個追加の状態でまず検証する
-		var result = this._validate( delimOpen + current + delimClose );
+		var result = this._validate( ve.smj.Delim.buildRaw( delim, current ) );
 		if ( result === 'ok' ) {
 			return { latex: current, count: 0, reason: 'ok' };
 		}
@@ -119,7 +117,7 @@ ve.smj.RawMathValidator = {
 					'} ' +
 					current.slice( closerPos );
 
-			result = this._validate( delimOpen + current + delimClose );
+			result = this._validate( ve.smj.Delim.buildRaw( delim, current ) );
 
 			if ( result === 'ok' ) {
 				return { latex: current, count: i, reason: 'ok' };
@@ -134,11 +132,23 @@ ve.smj.RawMathValidator = {
 	}
 };
 
-// マーカーとその中の } を取り除くヘルパー
-ve.smj.RawMathValidator.stripCloserMarker = function ( latex, delimOpen = '' ) {
-	var isBeginEnd = ( delimOpen === '' );
-	if ( isBeginEnd ) {
-		return latex.replace( /([\s\S]*)%\n[} ]+%ve-closer%\n(|\\end\s*{[^}]*})$/, '$1$2' );
+// ----------------------------------------------------------------
+// マーカー除去ヘルパー
+//
+// complete() が挿入したマーカーブロックを1個だけ除去する。
+// （gフラグなし：複数マーカーがある場合、残りはユーザー入力由来と
+//   みなして complete() 冒頭の無効化処理に委ねる）
+//
+// beginEnd の場合: \end の直前にあるマーカーブロックを除去
+// delim の場合:    末尾にあるマーカーブロックを除去
+//
+// @param  {string} latex
+// @param  {Object} delim  ve.smj.Delim オブジェクト
+// @return {string}
+// ----------------------------------------------------------------
+ve.smj.RawMathValidator.stripCloserMarker = function ( latex, delim ) {
+	if ( delim.type === 'beginEnd' ) {
+		return latex.replace( /%\n[} ]+%ve-closer%\n(\\end\s*{[^}]*})$/, '$1' );
 	}
 	return latex.replace( /%\n[} ]+%ve-closer%\n$/, '' );
 };

@@ -4,8 +4,8 @@ ve.ui.SMJRawMathInspector = function VeUiSMJRawMathInspector( config ) {
 	ve.ui.SMJRawMathInspector.super.call( this, config );
 };
 
-// MWExtensionInspector ではなく NodeInspector を継承する。
-// MWExtensionInspector は <tag>...</tag> 形式前提の処理を含むため。
+// MWLiveExtensionInspector ではなく NodeInspector を継承する。
+// MWLiveExtensionInspector は <tag>...</tag> 形式前提の処理を含むため。
 OO.inheritClass( ve.ui.SMJRawMathInspector, ve.ui.NodeInspector );
 
 ve.ui.SMJRawMathInspector.static.name = 'smjRawMathInspector';
@@ -44,7 +44,6 @@ ve.ui.SMJRawMathInspector.prototype.initialize = function () {
 	this.latexInput.connect( this, { change: 'onLatexChange' } );
 	this.delimSelect.connect( this, { change: 'onDelimChange' } );
 
-	// $body ではなく this.container.$element に追加する
 	this.container.$element.append(
 		new OO.ui.FieldLayout( this.latexInput, {
 			label: mw.msg( 'smj-ve-rawmath-latex-label' ),
@@ -64,9 +63,8 @@ ve.ui.SMJRawMathInspector.prototype.initialize = function () {
 
 ve.ui.SMJRawMathInspector.prototype._validateAndShowError = function () {
 	var latex = this.latexInput.getValue();
-	var pair = this.delimKeyToPair( this.delimSelect.getValue() );
-	var rawSource = pair.delimOpen + latex + pair.delimClose;
-	var result = ve.smj.RawMathValidator.validate( rawSource );
+	var delim = ve.smj.Delim.fromKey( this.delimSelect.getValue() );
+	var result = ve.smj.RawMathValidator.validate( latex, delim );
 
 	if ( result === 'incomplete' ) {
 		this.$errorMessage
@@ -80,45 +78,6 @@ ve.ui.SMJRawMathInspector.prototype._validateAndShowError = function () {
 	this.updateSize();
 
 	return result;
-};
-
-// ------------------------------------------------------------
-// デリミタペア ↔ ドロップダウン値の変換
-// ------------------------------------------------------------
-
-/**
- * delimOpen/delimClose のペアからドロップダウン値を返す。
- *
- * @param {string} open
- * @param {string} close
- * @return {string}
- */
-ve.ui.SMJRawMathInspector.prototype.delimPairToKey = function ( open, close ) {
-	if ( open === '$$' && close === '$$' ) {
-		return 'dollar-block';
-	}
-	if ( open === '\\(' && close === '\\)' ) {
-		return 'paren';
-	}
-	if ( open === '\\[' && close === '\\]' ) {
-		return 'bracket';
-	}
-	return 'begin-end'; // デフォルト: 環境用自由記述欄
-};
-
-/**
- * ドロップダウン値から delimOpen/delimClose ペアを返す。
- *
- * @param {string} key
- * @return {{ delimOpen: string, delimClose: string }}
- */
-ve.ui.SMJRawMathInspector.prototype.delimKeyToPair = function ( key ) {
-	switch ( key ) {
-		case 'dollar-block': return { delimOpen: '$$', delimClose: '$$' };
-		case 'paren': return { delimOpen: '\\(', delimClose: '\\)' };
-		case 'bracket': return { delimOpen: '\\[', delimClose: '\\]' };
-		default: return { delimOpen: '', delimClose: '' };
-	}
 };
 
 // ------------------------------------------------------------
@@ -136,15 +95,12 @@ ve.ui.SMJRawMathInspector.prototype.getSetupProcess = function ( data ) {
 				attrs = this.selectedNode.getAttributes();
 			}
 
+			var delim = ve.smj.Delim.fromAttrs( attrs );
+
 			this.latexInput.setValue(
-				ve.smj.RawMathValidator.stripCloserMarker( attrs.latex || '', attrs.delimOpen || '' )
+				ve.smj.RawMathValidator.stripCloserMarker( attrs.latex || '', delim )
 			);
-			this.delimSelect.setValue(
-				this.delimPairToKey(
-					attrs.delimOpen || '',
-					attrs.delimClose || ''
-				)
-			);
+			this.delimSelect.setValue( ve.smj.Delim.toKey( delim ) );
 		}, this );
 };
 
@@ -154,14 +110,11 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 		return new OO.ui.Process( function () {
 			var surfaceModel = this.getManager().getSurface().getModel();
 			var latex = this.latexInput.getValue();
-			var pair = this.delimKeyToPair( this.delimSelect.getValue() );
-			var rawSource = pair.delimOpen + latex + pair.delimClose;
-			var validation = ve.smj.RawMathValidator.validate( rawSource );
+			var delim = ve.smj.Delim.fromKey( this.delimSelect.getValue() );
+			var validation = ve.smj.RawMathValidator.validate( latex, delim );
 
 			if ( validation === 'incomplete' ) {
-				var completed = ve.smj.RawMathValidator.complete(
-					latex, pair.delimOpen, pair.delimClose
-				);
+				var completed = ve.smj.RawMathValidator.complete( latex, delim );
 
 				if ( completed.latex === null ) {
 					var msgKey = completed.reason === 'missing-end' ?
@@ -175,21 +128,17 @@ ve.ui.SMJRawMathInspector.prototype.getActionProcess = function ( action ) {
 				latex = completed.latex;
 			}
 
+			var delimAttrs = ve.smj.Delim.toAttrs( delim );
+
 			if ( this.selectedNode ) {
-				surfaceModel.getFragment().changeAttributes( {
-					latex: latex,
-					delimOpen: pair.delimOpen,
-					delimClose: pair.delimClose
-				} );
+				surfaceModel.getFragment().changeAttributes(
+					Object.assign( { latex: latex }, delimAttrs )
+				);
 			} else {
 				surfaceModel.getFragment().insertContent( [
 					{
 						type: 'smjRawMath',
-						attributes: {
-							latex: latex,
-							delimOpen: pair.delimOpen,
-							delimClose: pair.delimClose
-						}
+						attributes: Object.assign( { latex: latex }, delimAttrs )
 					},
 					{ type: '/smjRawMath' }
 				] );
@@ -241,12 +190,14 @@ ve.ui.SMJRawMathInspector.prototype.onDelimChange = function () {
 	if ( !this.selectedNode ) {
 		return;
 	}
-	var pair = this.delimKeyToPair( this.delimSelect.getValue() );
+	var delimAttrs = ve.smj.Delim.toAttrs(
+		ve.smj.Delim.fromKey( this.delimSelect.getValue() )
+	);
 	this.getManager()
 		.getSurface()
 		.getModel()
 		.getFragment()
-		.changeAttributes( pair );
+		.changeAttributes( delimAttrs );
 };
 
 ve.ui.windowFactory.register( ve.ui.SMJRawMathInspector );

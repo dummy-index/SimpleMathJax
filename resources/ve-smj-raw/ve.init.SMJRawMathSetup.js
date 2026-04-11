@@ -54,8 +54,7 @@ function findRawMath( text ) {
 //     rangeStart: number,   // DMオフセット（$の先頭）
 //     rangeEnd:   number,   // DMオフセット（$の末尾の次）
 //     latex:      string,
-//     delimOpen:  string,
-//     delimClose: string
+//     delim:      Object  // ve.smj.Delim オブジェクト
 //   }>
 // ----------------------------------------------------------------
 function collectReplacements( dmDoc ) {
@@ -200,12 +199,18 @@ function collectReplacements( dmDoc ) {
 					return;
 				}
 
+				// FindTeXの返値（open/close）から Delim オブジェクトを作る
+				// \begin...\end の場合は open/close が空文字列になる
+				var delim = ve.smj.Delim.fromAttrs( {
+					delimOpen: mi.open || '',
+					delimClose: mi.close || ''
+				} );
+
 				replacements.push( {
 					rangeStart: dmStart,
 					rangeEnd: dmEnd + 1,
 					latex: mi.math,
-					delimOpen: mi.open,
-					delimClose: mi.close
+					delim: delim
 				} );
 			} );
 		} );
@@ -218,9 +223,6 @@ function collectReplacements( dmDoc ) {
 
 // ----------------------------------------------------------------
 // 置換を実行する
-//
-// 複数のトランザクションを後ろから順に適用することで
-// オフセットのズレを回避する。
 // ----------------------------------------------------------------
 function applyReplacements( surfaceModel, dmDoc, replacements ) {
 	if ( !replacements.length ) {
@@ -229,16 +231,12 @@ function applyReplacements( surfaceModel, dmDoc, replacements ) {
 
 	// 後ろから順に処理（前を変更するとオフセットがずれるため）
 	replacements.slice().reverse().forEach( function ( rep ) {
+		var delimAttrs = ve.smj.Delim.toAttrs( rep.delim );
 
-		// 挿入するDMデータ：SMJRawMathNode のオープン＋クローズ
 		var insertData = [
 			{
 				type: 'smjRawMath',
-				attributes: {
-					latex: rep.latex,
-					delimOpen: rep.delimOpen,
-					delimClose: rep.delimClose
-				}
+				attributes: Object.assign( { latex: rep.latex }, delimAttrs )
 			},
 			{ type: '/smjRawMath' }
 		];
