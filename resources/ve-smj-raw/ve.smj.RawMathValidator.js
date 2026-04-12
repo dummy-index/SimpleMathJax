@@ -8,7 +8,15 @@ ve.smj.RawMathValidator = {
 	// FindTeX ヘルパー（ve.init.SMJRawMathSetup.js と共通化予定）
 	// ----------------------------------------------------------------
 
+	// テスト用 InputJax の差し込み口。
+	// null のとき（通常）は window.MathJax から取得する。
+	// QUnit の beforeEach/afterEach で差し替える。
+	_testInputJax: null,
+
 	_getInputJax: function () {
+		if ( ve.smj.RawMathValidator._testInputJax !== null ) {
+			return ve.smj.RawMathValidator._testInputJax;
+		}
 		return window.MathJax &&
 			MathJax.startup &&
 			MathJax.startup.input &&
