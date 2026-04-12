@@ -88,7 +88,8 @@ function collectReplacements( dmDoc ) {
 		var nodeRange = node.getRange();
 
 		// MathJax.skipHtmlTagsで指定されているpre等を除外する
-		// mwPreはコンテンツを持てるノードではない（中身をDMに展開しない）のでここに到達しない
+		// 標準のwikitext仕様で該当するのはmwPreformattedとmwPreだが、
+		// mwPreはコンテンツを持てるノードではない（中身をDMに展開しない）ので上のifで除外済み
 		if ( item.type === 'mwPreformatted' ) {
 			i = nodeRange.end;
 			continue;
@@ -122,9 +123,13 @@ function collectReplacements( dmDoc ) {
 				curMap.push( j );
 			} else if ( Array.isArray( ch ) && typeof ch[ 0 ] === 'string' ) {
 				// アノテーション付き文字 ['X', [annot,...]]
-				// FIXME: （skipHtmlTagsで指定されているcode等も除外すること）
+				// MathJax.skipHtmlTagsで指定されているcodeを除外する
+				var isCode = false;
 				const nextAnnotations = ch[ 1 ].filter( function ( anno ) {
 					var obj = dmDoc.getStore().value( anno );
+					if ( !Array.isArray( obj ) && obj.name === 'textStyle/code' ) {
+						isCode = true;
+					}
 					return !( !Array.isArray( obj ) && obj.name === 'mwNowiki' );
 				} ).join();
 				if ( curAnnotations !== nextAnnotations ) {
@@ -136,8 +141,10 @@ function collectReplacements( dmDoc ) {
 					}
 					curAnnotations = nextAnnotations;
 				}
-				curText += ch[ 0 ];
-				curMap.push( j );
+				if ( !isCode ) {
+					curText += ch[ 0 ];
+					curMap.push( j );
+				}
 			} else if ( ch && typeof ch === 'object' && ch.type ) {
 				// インラインノード（開き or 閉じ要素）
 				// ここでチャンクを確定する
